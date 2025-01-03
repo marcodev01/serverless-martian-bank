@@ -6,29 +6,37 @@ import { Construct } from 'constructs';
 
 export interface DomainEventBusProps {
   /**
-   * The name of the event bus
+   * The name of the EventBridge event bus.
    */
   busName: string;
 }
 
 /**
- * Event Bus Integration Pattern for domain events communication using EventBridge
+ * A custom Level 3 CDK construct that encapsulates an EventBridge event bus
+ * combinied with a Dead Letter Queue (DLQ) using Amazon SQS and CloudWatch logging.
+ *
+ * This construct represents a EventBus Integration Pattern for cross-domain communication 
+ * It provides a fluent API to manage permissions, routing rules, DLQs, and logging.
  */
-export class DomainEventBus extends Construct {
+export class DomainEventBusPattern extends Construct {
   public readonly eventBus: events.EventBus;
   private dlq?: sqs.Queue;
 
   constructor(scope: Construct, id: string, props: DomainEventBusProps) {
     super(scope, id);
 
-    // Create the event bus
+    // Create the EventBridge event bus with the specified name.
     this.eventBus = new events.EventBus(this, 'Bus', {
       eventBusName: props.busName
     });
   }
 
+
   /**
-   * Grant permissions to publish events to the bus
+   * Grants the specified Lambda function permissions to publish events to the event bus.
+   *
+   * @param handler - The Lambda function to which permissions are granted.
+   * @returns The current instance for method chaining.
    */
   public grantPutEvents(handler: lambda.Function): this {
     this.eventBus.grantPutEventsTo(handler);
@@ -36,7 +44,13 @@ export class DomainEventBus extends Construct {
   }
 
   /**
-   * Add a rule to route specific events to a Lambda function
+   * Adds a rule to route events matching a specific pattern to a target Lambda function.
+   * Optionally integrates the DLQ for retry behavior.
+   *
+   * @param id - A unique identifier for the rule.
+   * @param pattern - The event pattern to match.
+   * @param target - The Lambda function to invoke when the rule matches.
+   * @returns The current instance for method chaining.
    */
   public addRule(id: string, pattern: events.EventPattern, target: lambda.Function): this {
     new events.Rule(this, id, {
@@ -51,7 +65,10 @@ export class DomainEventBus extends Construct {
   }
 
   /**
-   * Enable CloudWatch logging
+   * Enables CloudWatch logging for the event bus, with a specified retention period.
+   *
+   * @param retention - The retention period for the CloudWatch logs.
+   * @returns The current instance for method chaining.
    */
   public enableLogging(retention: cdk.aws_logs.RetentionDays): this {
     new cdk.aws_logs.LogGroup(this, 'EventBusLogs', {
@@ -62,7 +79,11 @@ export class DomainEventBus extends Construct {
   }
 
   /**
-   * Configure a Dead Letter Queue (DLQ)
+   * Configures a Dead Letter Queue (DLQ) for the event bus.
+   *
+   * @param queueName - The name of the DLQ.
+   * @param retentionPeriod - The retention period for messages in the DLQ.
+   * @returns The current instance for method chaining.
    */
   public configureDeadLetterQueue(queueName: string, retentionPeriod: cdk.Duration): this {
     this.dlq = new sqs.Queue(this, 'DeadLetterQueue', {
@@ -73,16 +94,11 @@ export class DomainEventBus extends Construct {
   }
 
   /**
-   * Get the configured DLQ
+   * Retrieves the configured Dead Letter Queue (DLQ).
+   *
+   * @returns The SQS queue configured as the DLQ, or undefined if not configured.
    */
   public getDeadLetterQueue(): sqs.Queue | undefined {
     return this.dlq;
   }
 }
-
-// Example usage with fluent API:
-// const eventBus = new DomainEventBus(this, 'MyEventBus', { busName: 'my-bus' })
-//   .configureDeadLetterQueue('my-dlq', cdk.Duration.days(3))
-//   .grantPutEvents(myLambda)
-//   .addRule('MyRule', { source: ['my-app'] }, myLambda)
-//   .enableLogging(cdk.aws_logs.RetentionDays.ONE_WEEK);

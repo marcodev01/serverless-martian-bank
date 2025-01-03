@@ -5,16 +5,17 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as path from 'path';
 import { Construct } from 'constructs';
 import { DocumentDBStack } from '../../../lib/stacks/documentdb-stack';
-import { DomainEventBus } from '../../../lib/constructs/event-bus-pattern';
+import { DomainEventBusPattern } from '../../../lib/constructs/event-bus-pattern';
 
 interface AccountsStackProps extends cdk.StackProps {
   vpc: ec2.IVpc;
   documentDb: DocumentDBStack;
+  eventBus: DomainEventBusPattern;
 }
 
 export class AccountsStack extends cdk.Stack {
   public readonly api: apigateway.RestApi;
-  public readonly domainEventBus: DomainEventBus;
+  public readonly domainEventBus: DomainEventBusPattern;
 
   constructor(scope: Construct, id: string, props: AccountsStackProps) {
     super(scope, id, props);
@@ -25,7 +26,7 @@ export class AccountsStack extends cdk.Stack {
     /**
      * Lambda Functions
      * 
-     * Level 2 Construct with Lambda Function
+     * Level 2 Construct with aws-lambda
      */
 
     // Create shared Lambda layer
@@ -57,25 +58,22 @@ export class AccountsStack extends cdk.Stack {
      */
 
     // Create and configure the domain event bus (using Fluent API)
-    this.domainEventBus = new DomainEventBus(this, 'MartianBankEventBus', {
-      busName: 'martian-bank-events'
-    })
-    .configureDeadLetterQueue('martian-bank-dlq', cdk.Duration.days(1))
-    .enableLogging(cdk.aws_logs.RetentionDays.ONE_DAY)
-    .addRule('TransactionBalanceUpdate', { // Add event rule for transaction balance update
-      source: ['martian-bank.transactions'],
-      detailType: ['TransactionCompleted']
-     }, updateBalanceHandler)
-    .addRule('LoanBalanceUpdate', { // Add event rule for loan balance update
-      source: ['martian-bank.loans'],
-      detailType: ['LoanGranted']
-     }, updateBalanceHandler);
+    props.eventBus
+      .grantPutEvents(updateBalanceHandler)
+      .addRule('TransactionBalanceUpdate', { // Add event rule for transaction balance update
+        source: ['martian-bank.transactions'],
+        detailType: ['TransactionCompleted']
+      }, updateBalanceHandler)
+      .addRule('LoanBalanceUpdate', { // Add event rule for loan balance update
+        source: ['martian-bank.loans'],
+        detailType: ['LoanGranted']
+      }, updateBalanceHandler);
 
 
     /**
      * API Gateway
      * 
-     * Level 2 Construct with API Gateway
+     * Level 2 Construct with aws-apigateway
      */
 
     // Create and configure API Gateway

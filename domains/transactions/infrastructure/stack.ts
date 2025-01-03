@@ -5,16 +5,17 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as path from 'path';
 import { Construct } from 'constructs';
 import { DocumentDBStack } from '../../../lib/stacks/documentdb-stack';
-import { DomainEventBus } from '../../../lib/constructs/event-bus-pattern';
+import { DomainEventBusPattern } from '../../../lib/constructs/event-bus-pattern';
 
 interface TransactionsStackProps extends cdk.StackProps {
   vpc: ec2.IVpc;
   documentDb: DocumentDBStack;
+  eventBus: DomainEventBusPattern;
 }
 
 export class TransactionsStack extends cdk.Stack {
   public readonly api: apigateway.RestApi;
-  public readonly eventBus: DomainEventBus;
+  public readonly eventBus: DomainEventBusPattern;
 
   constructor(scope: Construct, id: string, props: TransactionsStackProps) {
     super(scope, id, props);
@@ -25,7 +26,7 @@ export class TransactionsStack extends cdk.Stack {
     /**
      * Lambda Functions
      * 
-     * Level 2 Construct with Lambda Function
+     * Level 2 Construct with aws-lambda
      */
 
     // Create shared Lambda layer
@@ -55,12 +56,9 @@ export class TransactionsStack extends cdk.Stack {
      */   
 
     // Create and configure the domain event bus (using Fluent API)
-    this.eventBus = new DomainEventBus(this, 'MartianBankEventBus', {
-      busName: 'martian-bank-events'
-    })
-    .configureDeadLetterQueue('martian-bank-dlq', cdk.Duration.days(1))
-    .enableLogging(cdk.aws_logs.RetentionDays.ONE_DAY)
-    .addRule('TransactionCompletedEvent', {
+    props.eventBus
+      .grantPutEvents(sendMoneyHandler)
+      .addRule('TransactionCompletedEvent', {
         source: ['martian-bank.transactions'],
         detailType: ['TransactionCompleted']
       }, sendMoneyHandler);
@@ -69,7 +67,7 @@ export class TransactionsStack extends cdk.Stack {
     /**
      * API Gateway
      * 
-     * Level 2 Construct with API Gateway
+     * Level 2 Construct with aws-apigateway
      */
 
     // Create and configure API Gateway
