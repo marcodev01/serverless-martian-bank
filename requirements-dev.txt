@@ -1,0 +1,14 @@
+# python local development dependencies
+
+# event bridge dependencies
+boto3
+# mongo db dependencies
+pymongo
+python-dotenv
+dotmap
+
+# Development dependencies
+pytest
+pytest-mock
+moto
+pylint

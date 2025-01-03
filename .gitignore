@@ -2,6 +2,8 @@
 !jest.config.js
 *.d.ts
 node_modules
+.venv_martianbank
+show_structure.sh
 
 # CDK asset staging directory
 .cdk.staging

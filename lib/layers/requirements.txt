@@ -1,0 +1,9 @@
+# lambda python runtime dependencies
+
+# event bridge dependencies
+boto3
+
+# mongo db dependencies
+pymongo
+python-dotenv
+dotmap
