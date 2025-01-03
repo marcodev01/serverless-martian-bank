@@ -16,41 +16,30 @@ export interface DomainEventBusProps {
  */
 export class DomainEventBus extends Construct {
   public readonly eventBus: events.EventBus;
-  private readonly dlq: sqs.Queue;
-  
+  private dlq?: sqs.Queue;
+
   constructor(scope: Construct, id: string, props: DomainEventBusProps) {
     super(scope, id);
-    
+
     // Create the event bus
     this.eventBus = new events.EventBus(this, 'Bus', {
       eventBusName: props.busName
-    });
-
-    // Create DLQ for failed events
-    this.dlq = new sqs.Queue(this, 'DeadLetterQueue', {
-      queueName: `${props.busName}-dlq`,
-      retentionPeriod: cdk.Duration.days(1),
-    });    
-    
-    // Enable CloudWatch logging for the event bus
-    const logGroup = new cdk.aws_logs.LogGroup(this, 'EventBusLogs', {
-      retention: cdk.aws_logs.RetentionDays.ONE_DAY,
-      removalPolicy: cdk.RemovalPolicy.DESTROY
     });
   }
 
   /**
    * Grant permissions to publish events to the bus
    */
-  public grantPutEvents(handler: lambda.Function) {
+  public grantPutEvents(handler: lambda.Function): this {
     this.eventBus.grantPutEventsTo(handler);
+    return this;
   }
 
   /**
    * Add a rule to route specific events to a Lambda function
    */
-  public addRule(id: string, pattern: events.EventPattern, target: lambda.Function) {
-    const rule = new events.Rule(this, id, {
+  public addRule(id: string, pattern: events.EventPattern, target: lambda.Function): this {
+    new events.Rule(this, id, {
       eventBus: this.eventBus,
       eventPattern: pattern,
       targets: [new cdk.aws_events_targets.LambdaFunction(target, {
@@ -58,5 +47,42 @@ export class DomainEventBus extends Construct {
         retryAttempts: 2,
       })]
     });
+    return this;
+  }
+
+  /**
+   * Enable CloudWatch logging
+   */
+  public enableLogging(retention: cdk.aws_logs.RetentionDays): this {
+    new cdk.aws_logs.LogGroup(this, 'EventBusLogs', {
+      retention,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+    return this;
+  }
+
+  /**
+   * Configure a Dead Letter Queue (DLQ)
+   */
+  public configureDeadLetterQueue(queueName: string, retentionPeriod: cdk.Duration): this {
+    this.dlq = new sqs.Queue(this, 'DeadLetterQueue', {
+      queueName,
+      retentionPeriod,
+    });
+    return this;
+  }
+
+  /**
+   * Get the configured DLQ
+   */
+  public getDeadLetterQueue(): sqs.Queue | undefined {
+    return this.dlq;
   }
 }
+
+// Example usage with fluent API:
+// const eventBus = new DomainEventBus(this, 'MyEventBus', { busName: 'my-bus' })
+//   .configureDeadLetterQueue('my-dlq', cdk.Duration.days(3))
+//   .grantPutEvents(myLambda)
+//   .addRule('MyRule', { source: ['my-app'] }, myLambda)
+//   .enableLogging(cdk.aws_logs.RetentionDays.ONE_WEEK);

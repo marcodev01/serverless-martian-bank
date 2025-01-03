@@ -14,7 +14,7 @@ interface AccountsStackProps extends cdk.StackProps {
 
 export class AccountsStack extends cdk.Stack {
   public readonly api: apigateway.RestApi;
-  public readonly eventBus: DomainEventBus;
+  public readonly domainEventBus: DomainEventBus;
 
   constructor(scope: Construct, id: string, props: AccountsStackProps) {
     super(scope, id, props);
@@ -22,10 +22,11 @@ export class AccountsStack extends cdk.Stack {
     const layersPath = path.resolve(__dirname, '../../../lib/layers/python');
     const handlerPath = path.resolve(__dirname, '../application/handlers');
 
-    /* EventBus Integration Pattern */
-    this.eventBus = new DomainEventBus(this, 'MartianBankEventBus', {
-      busName: 'martian-bank-events'
-    });    
+    /**
+     * Lambda Functions
+     * 
+     * Level 2 Construct with Lambda Function
+     */
 
     // Create shared Lambda layer
     const sharedLayer = new lambda.LayerVersion(this, 'SharedLayer', {
@@ -34,72 +35,50 @@ export class AccountsStack extends cdk.Stack {
       description: 'Shared utilities layer',
     });
 
-    // Common lambda configuration
-    const commonLambdaConfig = {
-      runtime: lambda.Runtime.PYTHON_3_9,
-      vpc: props.vpc,
-      layers: [sharedLayer],
-      environment: {
-        DB_URL: props.documentDb.clusterEndpoint,
-        EVENT_BUS_NAME: this.eventBus.eventBus.eventBusName
-      },
-      timeout: cdk.Duration.seconds(30),
-    };
-
     // Create Lambda functions
-    const getAccountDetailsHandler = new lambda.Function(this, 'GetAccountDetailsFunction', {
-      ...commonLambdaConfig,
-      handler: 'get_account_details.handler',
-      code: lambda.Code.fromAsset(handlerPath),
-    });
-
-    const createAccountHandler = new lambda.Function(this, 'CreateAccountFunction', {
-      ...commonLambdaConfig,
-      handler: 'create_account.handler',
-      code: lambda.Code.fromAsset(handlerPath),
-    });
-
-    const updateBalanceHandler = new lambda.Function(this, 'UpdateBalanceFunction', {
-      ...commonLambdaConfig,
-      handler: 'update_balance.handler',
-      code: lambda.Code.fromAsset(handlerPath),
-    });
-
-    const getAllAccountsHandler = new lambda.Function(this, 'GetAllAccountsFunction', {
-      ...commonLambdaConfig,
-      handler: 'get_all_accounts.handler',
-      code: lambda.Code.fromAsset(handlerPath),
-    });
-    
-    const getAccountByEmailHandler = new lambda.Function(this, 'GetAccountByEmailFunction', {
-      ...commonLambdaConfig,
-      handler: 'get_account_by_email.handler',
-      code: lambda.Code.fromAsset(handlerPath),
-    });
+    const getAccountDetailsHandler = this.createLambda('GetAccountDetailsFunction', 'get_account_details.handler', props, sharedLayer, handlerPath);
+    const getAllAccountsHandler = this.createLambda('GetAllAccountsFunction', 'get_all_accounts.handler', props, sharedLayer, handlerPath);
+    const createAccountHandler = this.createLambda('CreateAccountFunction', 'create_account.handler', props, sharedLayer, handlerPath);
+    const updateBalanceHandler = this.createLambda('UpdateBalanceFunction', 'update_balance.handler', props, sharedLayer, handlerPath);
 
     // Grant DocumentDB access to all Lambda functions
-    [
-      getAccountDetailsHandler, 
+    this.grantDocumentDbAccess(props, [
+      getAccountDetailsHandler,
+      getAllAccountsHandler, 
       createAccountHandler, 
       updateBalanceHandler,
-      getAllAccountsHandler,
-      getAccountByEmailHandler
-    ].forEach(handler => {
-      props.documentDb.grantAccess(handler);
-    });
+    ]);
 
-    // Add event rules for balance updates
-    this.eventBus.addRule('TransactionBalanceUpdate', {
+
+    /**
+     * EventBus Integration Pattern for cross domain communication using AWS EventBridge
+     * 
+     * Custom Level 3 Construct combining EventBridge-EventBus, DLQ (SQS) and CloudWatch Logs
+     */
+
+    // Create and configure the domain event bus (using Fluent API)
+    this.domainEventBus = new DomainEventBus(this, 'MartianBankEventBus', {
+      busName: 'martian-bank-events'
+    })
+    .configureDeadLetterQueue('martian-bank-dlq', cdk.Duration.days(1))
+    .enableLogging(cdk.aws_logs.RetentionDays.ONE_DAY)
+    .addRule('TransactionBalanceUpdate', { // Add event rule for transaction balance update
       source: ['martian-bank.transactions'],
       detailType: ['TransactionCompleted']
-    }, updateBalanceHandler);
-
-    this.eventBus.addRule('LoanBalanceUpdate', {
+     }, updateBalanceHandler)
+    .addRule('LoanBalanceUpdate', { // Add event rule for loan balance update
       source: ['martian-bank.loans'],
       detailType: ['LoanGranted']
-    }, updateBalanceHandler);
+     }, updateBalanceHandler);
 
-    /* API Gateway */
+
+    /**
+     * API Gateway
+     * 
+     * Level 2 Construct with API Gateway
+     */
+
+    // Create and configure API Gateway
     this.api = new apigateway.RestApi(this, 'AccountsApi', {
       restApiName: 'Accounts Service',
       defaultCorsPreflightOptions: {
@@ -109,29 +88,39 @@ export class AccountsStack extends cdk.Stack {
     });
 
     // Add routes to API Gateway
-    const accounts = this.api.root.addResource('accounts');
-
-    accounts
-    .addResource('create-account')
-    .addMethod('POST', new apigateway.LambdaIntegration(createAccountHandler));        
-    
-    accounts
-    .addResource('account-detail')
-    .addMethod('POST', new apigateway.LambdaIntegration(getAccountDetailsHandler));
-
-    accounts
-    .addResource('get-all-accounts')
-    .addMethod('POST', new apigateway.LambdaIntegration(getAllAccountsHandler));
-
-    accounts
-    .addResource('get-account-by-email')
-    .addMethod('POST', new apigateway.LambdaIntegration(getAccountByEmailHandler));
+    const account = this.api.root.addResource('account');
+    account.addResource('create').addMethod('POST', new apigateway.LambdaIntegration(createAccountHandler));
+    account.addResource('detail').addMethod('POST', new apigateway.LambdaIntegration(getAccountDetailsHandler));
+    account.addResource('allaccounts').addMethod('POST', new apigateway.LambdaIntegration(getAllAccountsHandler));
 
 
-    // Add CloudFormation output
+    /**
+     * CloudFormation console output
+     * 
+     * Level 1 Construct with CfnOutput
+     */
     new cdk.CfnOutput(this, 'ApiUrl', {
       value: this.api.url,
       description: 'API Gateway URL',
     });
+  }
+
+  private createLambda(id: string, handler: string, props: AccountsStackProps, layer: lambda.LayerVersion, handlerPath: string): lambda.Function {
+    return new lambda.Function(this, id, {
+      runtime: lambda.Runtime.PYTHON_3_9,
+      vpc: props.vpc,
+      layers: [layer],
+      handler,
+      code: lambda.Code.fromAsset(handlerPath),
+      environment: {
+        DB_URL: props.documentDb.clusterEndpoint,
+        EVENT_BUS_NAME: this.domainEventBus.eventBus.eventBusName
+      },
+      timeout: cdk.Duration.seconds(30),
+    });
+  }
+
+  private grantDocumentDbAccess(props: AccountsStackProps, handlers: lambda.Function[]): void {
+    handlers.forEach(handler => props.documentDb.grantAccess(handler));
   }
 }
