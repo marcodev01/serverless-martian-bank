@@ -8,3 +8,4 @@ show_structure.sh
 # CDK asset staging directory
 .cdk.staging
 cdk.out
+dist
