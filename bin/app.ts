@@ -1,19 +1,18 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
-import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { DocumentDBStack } from '../lib/stacks/documentdb-stack';
-import { AccountsStack } from '../domains/accounts/infrastructure/stack';
-import { LoansStack } from '../domains/loans/infrastructure/stack';
-import { TransactionsStack } from '../domains/transactions/infrastructure/stack';
-import { DomainEventBusPattern } from '../lib/constructs/event-bus-pattern';
+import { AccountsStack } from '../domains/accounts/infrastructure/accounts-stack';
+import { NetworkStack } from '../lib/stacks/network-stack';
+import { LoansStack } from '../domains/loans/infrastructure/loans-stack';
+import { TransactionsStack } from '../domains/transactions/infrastructure/transactions-stack';
 
 
 /**
  * The root of the AWS CDK application.
  * 
  * It serves as the entry point for defining one or more stacks. 
- * Each stack represents a collection of AWS resources that are deployed togeth
-*/
+ * Each stack represents a collection of AWS resources that are deployed together
+ */
 const app = new cdk.App();
 
 // Environment configuration for the deployment
@@ -23,68 +22,74 @@ const env = {
 };
 
 /**
- * Network Stack
+ * Network Stack (independent)
  * 
- * This stack contains the VPC and EventBus, which are shared across all domain stacks.
+ * Base infrastructure stack providing shared networking resources:
+ * - VPC with public and private subnets
+ * - EventBus for cross-domain communication
  */
-const networkStack = new cdk.Stack(app, 'NetworkStack', { env });
-
-// Shared VPC configuration using the ec2.vpc Level 2 Construct
-const vpc = new ec2.Vpc(networkStack, 'SharedVpc', {
-  maxAzs: 2,
-  natGateways: 1,
-});
-
-// Global configuration of shared EventBus for cross domain communication
-const domainEventBusPattern = new DomainEventBusPattern(networkStack, 'MartianBankEventBus', {
-  busName: 'martian-bank-event-bus'
-})
-.configureDeadLetterQueue('martian-bank-dlq', cdk.Duration.days(1))
-.enableLogging(cdk.aws_logs.RetentionDays.ONE_DAY);
+const networkStack = new NetworkStack(app, 'NetworkStack', { env });
 
 
 /**
  * Statefull Stack with DocumentDB
  * 
- * A shared DocumentDB instance for stateful data storage across domain stacks.
+ * Shared database stack providing MongoDB-compatible document storage:
+ * - DocumentDB cluster in private subnets
+ * - Security group configuration
  */
-const documentDbStack = new DocumentDBStack(app, 'DocumentDBStack', {
-  vpc,
-});
+const documentDbStack = new DocumentDBStack(app, 'DocumentDBStack', { env, vpc: networkStack.vpc } );
+// Make dependencies explicit (AaC Paradigm)
+documentDbStack.addDependency(networkStack); // Depends on NetworkStack for VPC. Note: CDK respects this order during deployment.
+
 
 /**
  * Stateless Domain Stacks
  * 
- * Stateless stacks for Accounts, Loans, and Transactions.
- * These stacks use the shared VPC, DocumentDB, and EventBus.
+ * Stateless stacks for Application Domains:
+ * - Serverless API with domain spefiic logic provided by Lambda functions
+ * - Event-driven integration for cross domain communication
+ * - Secure database access 
  */
 
-// Accounts domain Stack
-new AccountsStack(app, 'MartianBankAccountsStack', { 
-  env, 
-  vpc, 
-  documentDb: documentDbStack, 
-  eventBus: domainEventBusPattern 
-});
+
 
 // Loans domain Stack
-new LoansStack(app, 'MartianBankLoansStack', { 
+const loansStack = new LoansStack(app, 'LoansStack', { 
   env, 
-  vpc, 
-  documentDb: documentDbStack, 
-  eventBus: domainEventBusPattern 
+  vpc: networkStack.vpc, 
+  eventBus: networkStack.eventBus
 });
+// Make dependencies explicit (AaC Paradigm)
+loansStack.addDependency(networkStack); // Depends on NetworkStack for VPC and EventBus
+// Note: This dependency is injected via CloudFormation exports for loose coupling and avoiding cyclic dependencies...
+loansStack.addDependency(documentDbStack); // Depends on DocumentDBStack for database access. 
 
-// Transactions domain Stack
-new TransactionsStack(app, 'MartianBankTransactionsStack', { 
-  env, 
-  vpc, 
-  documentDb: documentDbStack, 
-  eventBus: domainEventBusPattern 
-});
+// // Loans domain Stack
+// const transactionsStack = new TransactionsStack(app, 'TransactionsStack', { 
+//   env, 
+//   vpc: networkStack.vpc, 
+//   eventBus: networkStack.eventBus
+// });
+// // Make dependencies explicit (AaC Paradigm)
+// transactionsStack.addDependency(networkStack); // Depends on NetworkStack for VPC and EventBus
+// // Note: This dependency is injected via CloudFormation exports for loose coupling and avoiding cyclic dependencies...
+// transactionsStack.addDependency(documentDbStack); // Depends on DocumentDBStack for database access.
+
+// // Accounts domain Stack
+// const accountsStack = new AccountsStack(app, 'AccountsStack', { 
+//   env, 
+//   vpc: networkStack.vpc, 
+//   eventBus: networkStack.eventBus
+// });
+// // Make dependencies explicit (AaC Paradigm)
+// accountsStack.addDependency(networkStack); // Depends on NetworkStack for VPC and EventBus
+// // Note: This dependency is injected via CloudFormation exports for loose coupling and avoiding cyclic dependencies...
+// accountsStack.addDependency(documentDbStack); // Depends on DocumentDBStack for database access. 
+
 
 /**
- * Global tags for resource identification
+ * Global tags for resource tagging
  */
 cdk.Tags.of(app).add('project', 'serverless-martian-bank');
 cdk.Tags.of(app).add('environment', 'development');

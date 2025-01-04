@@ -4,6 +4,15 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { Construct } from 'constructs';
 
+/**
+ * Supported domain event types in the Martian Bank system.
+ * Used for strong typing of event communications.
+ */
+export enum DomainEventTypes {
+  TRANSACTION_COMPLETED = 'transaction.completed',
+  LOAN_GRANTED = 'loan.granted'            
+}
+
 export interface DomainEventBusProps {
   /**
    * The name of the EventBridge event bus.
@@ -17,9 +26,11 @@ export interface DomainEventBusProps {
  *
  * This construct represents a EventBus Integration Pattern for cross-domain communication 
  * It provides a fluent API to manage permissions, routing rules, DLQs, and logging.
+ * Events are strongly typed using the DomainEventTypes enum.
  */
 export class DomainEventBusPattern extends Construct {
   public readonly eventBus: events.EventBus;
+  private readonly eventTypes: Set<DomainEventTypes> = new Set();
   private dlq?: sqs.Queue;
 
   constructor(scope: Construct, id: string, props: DomainEventBusProps) {
@@ -33,34 +44,60 @@ export class DomainEventBusPattern extends Construct {
 
 
   /**
-   * Grants the specified Lambda function permissions to publish events to the event bus.
-   *
-   * @param handler - The Lambda function to which permissions are granted.
+   * Registers a new event type with the event bus.
+   * Events must be registered before they can be published or subscribed to.
+   * 
+   * @param eventType - The domain event type to register
    * @returns The current instance for method chaining.
    */
-  public grantPutEvents(handler: lambda.Function): this {
+  public registerEventType(eventType: DomainEventTypes): this {
+    this.eventTypes.add(eventType);
+    return this;
+  }
+
+
+  /**
+   * Configures a Lambda function as an event publisher.
+   * Validates that all events the publisher wants to emit are registered.
+   * 
+   * @param handler - The Lambda function that will publish events
+   * @param allowedEvents - Array of event types this publisher is allowed to emit
+   * @returns The current instance for method chaining.
+   * @throws Error if any event type is not registered
+   */
+  public configurePublisher(handler: lambda.Function, allowedEvents: DomainEventTypes[]): this {
+    allowedEvents.forEach(eventType => {
+      if (!this.eventTypes.has(eventType)) {
+        throw new Error(`Event type ${eventType} not registered`);
+      }
+    });
+    
     this.eventBus.grantPutEventsTo(handler);
     return this;
   }
 
+
   /**
-   * Adds a rule to route events matching a specific pattern to a target Lambda function.
-   * Optionally integrates the DLQ for retry behavior.
-   *
-   * @param id - A unique identifier for the rule.
-   * @param pattern - The event pattern to match.
-   * @param target - The Lambda function to invoke when the rule matches.
+   * Configures a Lambda function as an event subscriber.
+   * Creates EventBridge rules for each subscribed event type.
+   * 
+   * @param handler - The Lambda function that will receive events
+   * @param subscribedEvents - Array of event types this subscriber wants to receive
    * @returns The current instance for method chaining.
+   * @throws Error if any event type is not registered
    */
-  public addRule(id: string, pattern: events.EventPattern, target: lambda.Function): this {
-    new events.Rule(this, id, {
-      eventBus: this.eventBus,
-      eventPattern: pattern,
-      targets: [new cdk.aws_events_targets.LambdaFunction(target, {
-        deadLetterQueue: this.dlq,
-        retryAttempts: 2,
-      })]
+  public configureSubscriber(handler: lambda.Function, subscribedEvents: DomainEventTypes[], source: string): this {
+    subscribedEvents.forEach(eventType => {
+      if (!this.eventTypes.has(eventType)) {
+        throw new Error(`Event type ${eventType} not registered`);
+      }
+      
+      this.addRule(`${eventType}Rule`, {
+        source: [source],
+        detailType: [eventType]
+      }, handler);
     });
+    
     return this;
   }
 
@@ -101,4 +138,26 @@ export class DomainEventBusPattern extends Construct {
   public getDeadLetterQueue(): sqs.Queue | undefined {
     return this.dlq;
   }
+
+  /**
+   * Adds a rule to route events matching a specific pattern to a target Lambda function.
+   * Optionally integrates the DLQ for retry behavior.
+   *
+   * @param id - A unique identifier for the rule.
+   * @param pattern - The event pattern to match.
+   * @param target - The Lambda function to invoke when the rule matches.
+   * @returns The current instance for method chaining.
+   */
+  private addRule(id: string, pattern: events.EventPattern, target: lambda.Function): this {
+    new events.Rule(this, id, {
+      eventBus: this.eventBus,
+      eventPattern: pattern,
+      targets: [new cdk.aws_events_targets.LambdaFunction(target, {
+        deadLetterQueue: this.dlq,
+        retryAttempts: 2,
+      })]
+    });
+    return this;
+  }
+
 }
