@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
 import { DocumentDBStack } from '../lib/stacks/documentdb-stack';
-import { AccountsStack } from '../domains/accounts/infrastructure/accounts-stack';
 import { NetworkStack } from '../lib/stacks/network-stack';
-import { LoansStack } from '../domains/loans/infrastructure/loans-stack';
+import { AccountsStack } from '../domains/accounts/infrastructure/accounts-stack';
 import { TransactionsStack } from '../domains/transactions/infrastructure/transactions-stack';
+import { LoansStack } from '../domains/loans/infrastructure/loans-stack';
 
 
 /**
@@ -30,7 +30,6 @@ const env = {
  */
 const networkStack = new NetworkStack(app, 'NetworkStack', { env });
 
-
 /**
  * Statefull Stack with DocumentDB
  * 
@@ -39,10 +38,6 @@ const networkStack = new NetworkStack(app, 'NetworkStack', { env });
  * - Security group configuration
  */
 const documentDbStack = new DocumentDBStack(app, 'DocumentDBStack', { env, vpc: networkStack.vpc } );
-/* Make dependencies explicit (AaC Paradigm) */
-// Depends on NetworkStack for VPC. Note: CDK respects this order during deployment.
-documentDbStack.addDependency(networkStack); 
-
 
 /**
  * Stateless Domain Stacks
@@ -52,43 +47,41 @@ documentDbStack.addDependency(networkStack);
  * - Event-driven integration for cross domain communication
  * - Secure database access 
  */
-
 // Loans domain Stack
 const loansStack = new LoansStack(app, 'LoansStack', { 
   env, 
   vpc: networkStack.vpc, 
   eventBus: networkStack.eventBus
 });
-// Depends on NetworkStack for VPC and EventBus
-loansStack.addDependency(networkStack); 
-// Depends on DocumentDBStack for database access. 
-// Note: This dependency is injected via CloudFormation exports for loose coupling and avoiding cyclic dependencies...
-loansStack.addDependency(documentDbStack); 
-
 // transactions domain Stack
 const transactionsStack = new TransactionsStack(app, 'TransactionsStack', { 
   env, 
   vpc: networkStack.vpc, 
   eventBus: networkStack.eventBus
 });
-// Depends on NetworkStack for VPC and EventBus
-transactionsStack.addDependency(networkStack); 
-// Depends on DocumentDBStack for database access.
-// Note: This dependency is injected via CloudFormation exports for loose coupling and avoiding cyclic dependencies...
-transactionsStack.addDependency(documentDbStack); 
-
 // Accounts domain Stack
 const accountsStack = new AccountsStack(app, 'AccountsStack', { 
   env, 
   vpc: networkStack.vpc, 
   eventBus: networkStack.eventBus
 });
-// Depends on NetworkStack for VPC and EventBus
-accountsStack.addDependency(networkStack); 
-// Depends on DocumentDBStack for database access. 
-// Note: This dependency is injected via CloudFormation exports for loose coupling and avoiding cyclic dependencies...
-accountsStack.addDependency(documentDbStack); 
 
+/**  
+ * Make dependencies explicit between stacks as part of the Architecture as Code (AaC) paradigm.
+ *
+ * While the AWS CDK can infer dependencies based on resource references, explicitly defining them enhances clarity and control over deployment order. 
+ * Note: CDK respects these dependencies during deployment to maintain consistency.
+ */
+// DocumentDB stack depends on NetworkStack for VPC. 
+documentDbStack.addDependency(networkStack); 
+
+[loansStack, transactionsStack, accountsStack].forEach(domainStack => {
+  // Each domain stack depends on NetworkStack for VPC and EventBus
+  domainStack.addDependency(networkStack);
+  // Each domain stack depends on DocumentDBStack for database access. 
+  // Note:  This dependency is resolved through CloudFormation exports, promoting loose coupling between stacks.
+  domainStack.addDependency(documentDbStack);
+});
 
 /**
  * Global tags for resource tagging
