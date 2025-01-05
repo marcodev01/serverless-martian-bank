@@ -39,8 +39,9 @@ const networkStack = new NetworkStack(app, 'NetworkStack', { env });
  * - Security group configuration
  */
 const documentDbStack = new DocumentDBStack(app, 'DocumentDBStack', { env, vpc: networkStack.vpc } );
-// Make dependencies explicit (AaC Paradigm)
-documentDbStack.addDependency(networkStack); // Depends on NetworkStack for VPC. Note: CDK respects this order during deployment.
+/* Make dependencies explicit (AaC Paradigm) */
+// Depends on NetworkStack for VPC. Note: CDK respects this order during deployment.
+documentDbStack.addDependency(networkStack); 
 
 
 /**
@@ -52,40 +53,41 @@ documentDbStack.addDependency(networkStack); // Depends on NetworkStack for VPC.
  * - Secure database access 
  */
 
-
-
 // Loans domain Stack
 const loansStack = new LoansStack(app, 'LoansStack', { 
   env, 
   vpc: networkStack.vpc, 
   eventBus: networkStack.eventBus
 });
-// Make dependencies explicit (AaC Paradigm)
-loansStack.addDependency(networkStack); // Depends on NetworkStack for VPC and EventBus
+// Depends on NetworkStack for VPC and EventBus
+loansStack.addDependency(networkStack); 
+// Depends on DocumentDBStack for database access. 
 // Note: This dependency is injected via CloudFormation exports for loose coupling and avoiding cyclic dependencies...
-loansStack.addDependency(documentDbStack); // Depends on DocumentDBStack for database access. 
+loansStack.addDependency(documentDbStack); 
 
-// // Loans domain Stack
-// const transactionsStack = new TransactionsStack(app, 'TransactionsStack', { 
-//   env, 
-//   vpc: networkStack.vpc, 
-//   eventBus: networkStack.eventBus
-// });
-// // Make dependencies explicit (AaC Paradigm)
-// transactionsStack.addDependency(networkStack); // Depends on NetworkStack for VPC and EventBus
-// // Note: This dependency is injected via CloudFormation exports for loose coupling and avoiding cyclic dependencies...
-// transactionsStack.addDependency(documentDbStack); // Depends on DocumentDBStack for database access.
+// transactions domain Stack
+const transactionsStack = new TransactionsStack(app, 'TransactionsStack', { 
+  env, 
+  vpc: networkStack.vpc, 
+  eventBus: networkStack.eventBus
+});
+// Depends on NetworkStack for VPC and EventBus
+transactionsStack.addDependency(networkStack); 
+// Depends on DocumentDBStack for database access.
+// Note: This dependency is injected via CloudFormation exports for loose coupling and avoiding cyclic dependencies...
+transactionsStack.addDependency(documentDbStack); 
 
-// // Accounts domain Stack
-// const accountsStack = new AccountsStack(app, 'AccountsStack', { 
-//   env, 
-//   vpc: networkStack.vpc, 
-//   eventBus: networkStack.eventBus
-// });
-// // Make dependencies explicit (AaC Paradigm)
-// accountsStack.addDependency(networkStack); // Depends on NetworkStack for VPC and EventBus
-// // Note: This dependency is injected via CloudFormation exports for loose coupling and avoiding cyclic dependencies...
-// accountsStack.addDependency(documentDbStack); // Depends on DocumentDBStack for database access. 
+// Accounts domain Stack
+const accountsStack = new AccountsStack(app, 'AccountsStack', { 
+  env, 
+  vpc: networkStack.vpc, 
+  eventBus: networkStack.eventBus
+});
+// Depends on NetworkStack for VPC and EventBus
+accountsStack.addDependency(networkStack); 
+// Depends on DocumentDBStack for database access. 
+// Note: This dependency is injected via CloudFormation exports for loose coupling and avoiding cyclic dependencies...
+accountsStack.addDependency(documentDbStack); 
 
 
 /**

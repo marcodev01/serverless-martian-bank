@@ -3,7 +3,7 @@ from decimal import Decimal
 
 class LoanGrantedEvent:
     SOURCE = 'martian-bank.loans'
-    TYPE = 'LoanGranted'
+    TYPE = 'loan.granted'
     
     def __init__(self, account_number: str, amount: Decimal):
         self.account_number = account_number

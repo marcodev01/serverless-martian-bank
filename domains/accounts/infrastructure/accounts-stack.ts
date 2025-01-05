@@ -5,12 +5,13 @@ import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as path from 'path';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as targets from 'aws-cdk-lib/aws-events-targets';
 import { Construct } from 'constructs';
-import { DomainEventBusPattern, DomainEventTypes } from '../../../lib/constructs/event-bus-pattern';
 
 interface AccountsStackProps extends cdk.StackProps {
   vpc: ec2.IVpc;
-  eventBus: DomainEventBusPattern;
+  eventBus: events.EventBus;
 }
 
 /**
@@ -55,15 +56,12 @@ export class AccountsStack extends cdk.Stack {
     const handlers = this.createAccountHandlers(props, handlerPath);
 
     /**
-     * EventBus Integration Pattern for cross domain communication using AWS EventBridge
+     * EventBus for cross domain communication 
      * 
-     * Custom Level 2+ Construct combining EventBridge-EventBus, DLQ (SQS) and CloudWatch Logs
+     * Level 2 Construct with aws-events
      */
     
-    // Configure EventBus integration
-    props.eventBus
-      .configureSubscriber(handlers.updateBalance, [DomainEventTypes.LOAN_GRANTED], 'any')
-      .configureSubscriber(handlers.updateBalance, [DomainEventTypes.TRANSACTION_COMPLETED], 'any');
+    this.configureEventSubscriptions(props.eventBus, handlers.updateBalance);
 
 
     /**
@@ -120,7 +118,8 @@ export class AccountsStack extends cdk.Stack {
       code: lambda.Code.fromAsset(handlerPath),
       environment: {
         DB_URL: this.docDbClusterEndpoint,
-        EVENT_BUS_NAME: props.eventBus.eventBus.eventBusName
+        EVENT_BUS_NAME: props.eventBus.eventBusName,
+        EVENT_SOURCE: 'accounts.domain'
       },
       timeout: cdk.Duration.seconds(30),
     });
@@ -142,5 +141,34 @@ export class AccountsStack extends cdk.Stack {
         resources: [clusterArn],
       })
     );
+  }
+
+
+  private configureEventSubscriptions(eventBus: events.IEventBus, handler: lambda.Function) {
+    const subscriptions = [
+      {
+        id: 'LoanGrantedRule',
+        source: 'martian-bank.loans',
+        detailType: 'loan.granted'
+      },
+      {
+        id: 'TransactionCompletedRule',
+        source: 'martian-bank.transactions',
+        detailType: 'transaction.completed'
+      }
+    ];
+
+    subscriptions.forEach(sub => {
+      new events.Rule(this, sub.id, {
+        eventBus,
+        eventPattern: {
+          source: [sub.source],
+          detailType: [sub.detailType]
+        },
+        targets: [new targets.LambdaFunction(handler, {
+          retryAttempts: 2
+        })]
+      });
+    });
   }
 }

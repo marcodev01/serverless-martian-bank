@@ -4,12 +4,12 @@ import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as path from 'path';
+import * as events from 'aws-cdk-lib/aws-events';
 import { Construct } from 'constructs';
-import { DomainEventBusPattern, DomainEventTypes } from '../../../lib/constructs/event-bus-pattern';
 
 interface TransactionsStackProps extends cdk.StackProps {
   vpc: ec2.IVpc;
-  eventBus: DomainEventBusPattern;
+  eventBus: events.EventBus;
 }
 
 /**
@@ -53,15 +53,13 @@ export class TransactionsStack extends cdk.Stack {
     const handlers = this.createTransactionHandlers(props, handlerPath);
 
     /**
-     * EventBus Integration Pattern for cross domain communication using AWS EventBridge
+     * EventBus for cross domain communication 
      * 
-     * Custom Level 2+ Construct combining EventBridge-EventBus, DLQ (SQS) and CloudWatch Logs
+     * Level 2 Construct with aws-events
      */
     
-    // Configure EventBus integration
-    props.eventBus
-      .registerEventType(DomainEventTypes.TRANSACTION_COMPLETED)
-      .configurePublisher(handlers.sendMoney, [DomainEventTypes.TRANSACTION_COMPLETED]);
+    // Grant EventBus permissions for sendMoney handler (process transaction) to publish events
+    props.eventBus.grantPutEventsTo(handlers.sendMoney);
 
     /**
      * API Gateway
@@ -116,7 +114,8 @@ export class TransactionsStack extends cdk.Stack {
       code: lambda.Code.fromAsset(handlerPath),
       environment: {
         DB_URL: this.docDbClusterEndpoint,
-        EVENT_BUS_NAME: props.eventBus.eventBus.eventBusName
+        EVENT_BUS_NAME: props.eventBus.eventBusName,
+        EVENT_SOURCE: 'martian-bank.transactions'
       },
       timeout: cdk.Duration.seconds(30),
     });

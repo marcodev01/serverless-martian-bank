@@ -1,15 +1,16 @@
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import { DomainEventBusPattern } from '../constructs/event-bus-pattern';
+import * as events from 'aws-cdk-lib/aws-events';
+import { Construct } from 'constructs';
 
 /**
  * Base network infrastructure stack that provides a shared VPC and event bus for the Martian Bank application. 
  */
 export class NetworkStack extends cdk.Stack {
   public readonly vpc: ec2.Vpc;
-  public readonly eventBus: DomainEventBusPattern;
+  public readonly eventBus: events.EventBus;
 
-  constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
     // Create VPC using the ec2.vpc Level 2 Construct that implements AWS best practices
@@ -30,14 +31,10 @@ export class NetworkStack extends cdk.Stack {
       ]
     });
 
-
-
-    // Create domain event bus with dead letter queue and logging using the custom Level 2+ Construct
-    this.eventBus = new DomainEventBusPattern(this, 'MartianBankEventBus', {
-      busName: 'martian-bank-event-bus'
-    })
-    .configureDeadLetterQueue('martian-bank-dlq', cdk.Duration.days(1))
-    .enableLogging(cdk.aws_logs.RetentionDays.ONE_DAY);
+    // Create the EventBridge event bus using the events.EventBus Level 2 Construct that implements AWS best practices    
+    this.eventBus = new events.EventBus(this, 'DomainEventBus', {
+      eventBusName: 'MartianBankEventBus',
+    });
 
   }
 }
