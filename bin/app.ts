@@ -5,6 +5,7 @@ import { NetworkStack } from '../lib/stacks/network-stack';
 import { AccountsStack } from '../domains/accounts/infrastructure/accounts-stack';
 import { TransactionsStack } from '../domains/transactions/infrastructure/transactions-stack';
 import { LoansStack } from '../domains/loans/infrastructure/loans-stack';
+import { UiStack } from '../ui/infrastructure/ui-stack';
 
 
 /**
@@ -66,6 +67,27 @@ const accountsStack = new AccountsStack(app, 'AccountsStack', {
   eventBus: networkStack.eventBus
 });
 
+
+/**
+ * UI Stack
+ * 
+ * Deploys the frontend for the `serverless-martian-bank` application:
+ * - Hosts the React-based frontend application in an S3 bucket.
+ * - Distributes content globally using CloudFront.
+ * - Dynamically injects API URLs for domain-specific APIs (Accounts, Transactions, Loans, etc.).
+ * 
+ *  Prerequisite: The React application must be built (e.g., using vite build), with the resulting artifacts placed in the ../build directory of the UI module.
+ */
+const uiStack = new UiStack(app, 'UiStack', {
+  env,
+  accountsApiUrl: accountsStack.api.url,
+  transactionsApiUrl: transactionsStack.api.url,
+  loanApiUrl: loansStack.api.url,
+  atmApiUrl: "", 
+  usersApiUrl: ""
+});
+
+
 /**  
  * Make dependencies explicit between stacks as part of the Architecture as Code (AaC) paradigm.
  *
@@ -79,8 +101,10 @@ documentDbStack.addDependency(networkStack);
   // Each domain stack depends on NetworkStack for VPC and EventBus
   domainStack.addDependency(networkStack);
   // Each domain stack depends on DocumentDBStack for database access. 
-  // Note:  This dependency is resolved through CloudFormation exports, promoting loose coupling between stacks.
+  // Note: This dependency is resolved through CloudFormation exports, promoting loose coupling between stacks.
   domainStack.addDependency(documentDbStack);
+  // UI Stack depends on each domain stack to ensure APIs are ready.
+  uiStack.addDependency(domainStack);
 });
 
 /**

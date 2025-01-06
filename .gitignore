@@ -4,6 +4,10 @@
 node_modules
 .venv_martianbank
 show_structure.sh
+build
+
+# Unignore .js files in /serverless-martian-bank/ui
+!ui/**/*.js
 
 # CDK asset staging directory
 .cdk.staging
