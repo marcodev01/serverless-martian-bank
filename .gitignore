@@ -9,6 +9,8 @@ build
 # Unignore .js files in /serverless-martian-bank/ui
 !ui/**/*.js
 
+!domains/atm/application/handlers/atm_locator.js
+
 # CDK asset staging directory
 .cdk.staging
 cdk.out

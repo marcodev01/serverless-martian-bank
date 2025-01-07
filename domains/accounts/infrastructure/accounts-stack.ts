@@ -60,7 +60,6 @@ export class AccountsStack extends cdk.Stack {
         handler: 'update_balance.handler',
         handlerPath: handlerPath
       })
-        .withMemory(512)
         .consumesEvent('martian-bank.loans', 'loan.granted')
         .consumesEvent('martian-bank.transactions', 'transaction.completed')
         .and()

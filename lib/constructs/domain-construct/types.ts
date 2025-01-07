@@ -46,7 +46,7 @@ export interface EventConsumer {
 export interface DomainStackProps {
   readonly domainName: string;
   readonly vpc: ec2.IVpc;
-  readonly eventBus: events.EventBus;
+  readonly eventBus?: events.EventBus;
   readonly apiConfig?: ApiConfig;
   readonly dbConfig?: DocumentDbConfig;
   readonly lambdaConfigs: LambdaConfig[];

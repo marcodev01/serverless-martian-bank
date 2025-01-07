@@ -17,7 +17,7 @@ import { DomainStackProps } from './types';
 export class DomainPattern extends Construct {
   public readonly api: apigateway.RestApi;
   public readonly lambdaFunctions: { [key: string]: lambda.Function };
-  private readonly lambdaLayers: { [key: string]: lambda.LayerVersion };
+  private readonly lambdaLayers: { [key: string]: lambda.LayerVersion } | null;
 
   constructor(scope: Construct, id: string, props: DomainStackProps) {
     super(scope, id);
@@ -36,7 +36,11 @@ export class DomainPattern extends Construct {
    * @param props Configuration for the Lambda layers.
    * @returns A map of layer names to their corresponding LayerVersion instances.
    */
-  private createLambdaLayers(props: DomainStackProps): { [key: string]: lambda.LayerVersion } {
+  private createLambdaLayers(props: DomainStackProps): { [key: string]: lambda.LayerVersion } | null {
+    if (!props.lambdaLayers?.length) {
+      return null;
+    }
+
     const layers: { [key: string]: lambda.LayerVersion } = {};
 
     /* Level 2 Construct with aws-lambda */
@@ -75,22 +79,30 @@ export class DomainPattern extends Construct {
         );
       }
 
+      const environment: { [key: string]: string } = {
+        ...config.environment
+      };
+      // Add event-related environment variables only if EventBus exists
+      if (props.eventBus) {
+        environment.EVENT_BUS_NAME = props.eventBus.eventBusName;
+        environment.EVENT_SOURCE = `martian-bank.${props.domainName}`;
+      }
+      // Add DB_URL if database config exists
+      if (props.dbConfig) {
+        environment.DB_URL = props.dbConfig.clusterEndpoint;
+      }
+
       // Create the Lambda function with the specified configuration by the Level 2 Construct aws-lambda
       const handler = new lambda.Function(this, config.name, {
         runtime: config.runtime || lambda.Runtime.PYTHON_3_9, // Default to Python 3.9 if runtime is not specified
         vpc: props.vpc,
-        layers: Object.values(this.lambdaLayers),
+        layers: this.lambdaLayers ? Object.values(this.lambdaLayers): undefined,
         securityGroups,
         handler: config.handler,
         code: lambda.Code.fromAsset(config.handlerPath),
         memorySize: config.memorySize,
         timeout: config.timeout,
-        environment: {
-          ...config.environment,
-          EVENT_BUS_NAME: props.eventBus.eventBusName,
-          EVENT_SOURCE: `martian-bank.${props.domainName}`,
-          ...(props.dbConfig && { DB_URL: props.dbConfig.clusterEndpoint }) // Database URL if provided
-        },
+        environment: environment
       });
 
       // Grant DocumentDB access if the DB configuration exists
@@ -139,17 +151,24 @@ export class DomainPattern extends Construct {
    * @param props Configuration for events and consumers.
    */
   private configureEventIntegration(props: DomainStackProps) {
+    // Skip event configuration if no EventBus is provided
+    if (!props.eventBus) {
+      return;
+    }
+
+    const eventBus = props.eventBus;
+
     props.lambdaConfigs.forEach(config => {
       const handler = this.lambdaFunctions[config.name];
 
       if (config.eventProducer) {
-        props.eventBus.grantPutEventsTo(handler);
+        eventBus.grantPutEventsTo(handler);
       }
 
       if (config.eventConsumers) {
         config.eventConsumers.forEach(consumer => {
           new events.Rule(this, `${config.name}${consumer.detailType}Rule`, {
-            eventBus: props.eventBus,
+            eventBus: eventBus,
             eventPattern: {
               source: [consumer.source],
               detailType: [consumer.detailType]

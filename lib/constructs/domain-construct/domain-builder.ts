@@ -21,7 +21,7 @@ import { DomainPattern } from './domain-pattern';
  */
 export class DomainBuilder {
   private readonly domainName: string;
-  private vpc?: ec2.IVpc;
+  private vpc: ec2.IVpc;
   private eventBus?: events.EventBus;
   private apiConfig?: ApiConfig;
   private dbConfig?: DocumentDbConfig;
@@ -130,11 +130,19 @@ export class DomainBuilder {
     if (!this.vpc) {
       throw new Error('VPC must be specified using withVpc()');
     }
-    if (!this.eventBus) {
-      throw new Error('EventBus must be specified using withEventBus()');
+    if (!this.apiConfig) {
+      throw new Error('API must be specified using withApi()');
     }
-    if (this.lambdaLayers.length === 0) {
-      throw new Error('At least one Lambda layer must be configured using addLambdaLayer()');
+    if (this.lambdaConfigs.size === 0) {
+      throw new Error('At least one Lambda function must be configured using addLambda()');
+    }
+    for (const [lambdaName, lambdaConfig] of this.lambdaConfigs) {
+      const hasEventConsumer = lambdaConfig.eventConsumers && lambdaConfig.eventConsumers.length > 0;
+      const hasRoute = this.apiRoutes.some(route => route.handlerName === lambdaName);
+  
+      if (!hasEventConsumer && !hasRoute) {
+        throw new Error(`Lambda function "${lambdaName}" must have at least one API route configured or consume events`);
+      }
     }
   }
 
@@ -150,7 +158,7 @@ export class DomainBuilder {
     const props: DomainStackProps = {
       domainName: this.domainName,
       vpc: this.vpc!,
-      eventBus: this.eventBus!,
+      eventBus: this.eventBus,
       apiConfig: this.apiConfig,
       dbConfig: this.dbConfig,
       lambdaConfigs: Array.from(this.lambdaConfigs.values()),

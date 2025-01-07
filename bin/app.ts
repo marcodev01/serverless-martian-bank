@@ -6,6 +6,7 @@ import { AccountsStack } from '../domains/accounts/infrastructure/accounts-stack
 import { TransactionsStack } from '../domains/transactions/infrastructure/transactions-stack';
 import { LoansStack } from '../domains/loans/infrastructure/loans-stack';
 import { UiStack } from '../ui/infrastructure/ui-stack';
+import { AtmStack } from '../domains/atm/infrastructure/atm-stack';
 
 
 /**
@@ -66,7 +67,13 @@ const accountsStack = new AccountsStack(app, 'AccountsStack', {
   vpc: networkStack.vpc, 
   eventBus: networkStack.eventBus
 });
-
+// ATM Locator Domain Stack
+// For simplicity, the ATM domain loads static ATM data from a JSON file, eliminating the need for database access.
+// Additionally, the ATM domain does not use an event-driven architecture.
+const atmStack = new AtmStack(app, 'AtmStack', { 
+  env, 
+  vpc: networkStack.vpc, 
+});
 
 /**
  * UI Stack
@@ -83,7 +90,7 @@ const uiStack = new UiStack(app, 'UiStack', {
   accountsApiUrl: accountsStack.api.url,
   transactionsApiUrl: transactionsStack.api.url,
   loanApiUrl: loansStack.api.url,
-  atmApiUrl: "", 
+  atmApiUrl: atmStack.api.url, 
   usersApiUrl: ""
 });
 
@@ -106,6 +113,8 @@ documentDbStack.addDependency(networkStack);
   // UI Stack depends on each domain stack to ensure APIs are ready.
   uiStack.addDependency(domainStack);
 });
+// ATM Domain stack depends on NetworkStack only for VPC.
+atmStack.addDependency(networkStack);
 
 /**
  * Global tags for resource tagging
