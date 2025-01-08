@@ -1,9 +1,3 @@
-/**
- * Copyright (c) 2023 Cisco Systems, Inc. and its affiliates All rights reserved.
- * Use of this source code is governed by a BSD-style
- * license that can be found in the LICENSE file.
- */
-
 import React from "react";
 import ReactDOM from "react-dom/client";
 import 'mdb-react-ui-kit/dist/css/mdb.min.css';
@@ -31,6 +25,15 @@ import TransferScreen from "./screens/TransferScreen.jsx";
 import TransactionScreen from "./screens/TransactionScreen.jsx";
 import LoanScreen from "./screens/LoanScreen.jsx";
 import ApplyLoan from "./screens/ApplyLoanScreen.jsx";
+import { Amplify } from 'aws-amplify';
+
+Amplify.configure({
+  Auth: {
+    region: import.meta.env.VITE_AWS_REGION,
+    userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID,
+    userPoolWebClientId: import.meta.env.VITE_COGNITO_CLIENT_ID,
+  }
+});
 
 const router = createBrowserRouter(
   createRoutesFromElements(

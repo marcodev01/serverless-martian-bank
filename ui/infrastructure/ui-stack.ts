@@ -5,13 +5,15 @@ import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as path from 'path';
+import { env } from 'process';
 
 interface UiStackProps extends cdk.StackProps {
   accountsApiUrl: string;
   transactionsApiUrl: string;
   loanApiUrl: string;
   atmApiUrl: string;
-  usersApiUrl: string; // TODO: remove and delegate to BaaS Service
+  cognitoPoolId: string;
+  cognitoClientId: string;
 }
 
 /**
@@ -69,7 +71,9 @@ export class UiStack extends cdk.Stack {
           VITE_TRANSFER_URL: `${props.transactionsApiUrl}/transaction/`, 
           VITE_LOAN_URL: `${props.loanApiUrl}/loan/`,
           VITE_ATM_URL: props.atmApiUrl,
-          VITE_USERS_URL: props.usersApiUrl
+          VITE_COGNITO_USER_POOL_ID: props.cognitoPoolId,
+          VITE_COGNITO_CLIENT_ID: props.cognitoClientId,
+          VITE_AWS_REGION: this.region
         })
       ],
       destinationBucket: websiteBucket,

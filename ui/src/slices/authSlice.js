@@ -1,11 +1,5 @@
-/**
- * Copyright (c) 2023 Cisco Systems, Inc. and its affiliates All rights reserved.
- * Use of this source code is governed by a BSD-style
- * license that can be found in the LICENSE file.
- */
-
 import { createSlice } from '@reduxjs/toolkit';
-import Cookies from 'js-cookie';
+import { Auth } from 'aws-amplify';
 
 const initialState = {
   userInfo: localStorage.getItem('userInfo')
@@ -23,12 +17,11 @@ const authSlice = createSlice({
     },
     logout: (state) => {
       state.userInfo = null;
-      // Cookies.remove('jwt');
       localStorage.removeItem('userInfo');
+      Auth.signOut(); 
     },
   },
 });
 
 export const { setCredentials, logout } = authSlice.actions;
-
 export default authSlice.reducer;

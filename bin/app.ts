@@ -7,6 +7,7 @@ import { TransactionsStack } from '../domains/transactions/infrastructure/transa
 import { LoansStack } from '../domains/loans/infrastructure/loans-stack';
 import { UiStack } from '../ui/infrastructure/ui-stack';
 import { AtmStack } from '../domains/atm/infrastructure/atm-stack';
+import { AuthStack } from '../lib/stacks/auth-stack';
 
 
 /**
@@ -31,6 +32,15 @@ const env = {
  * - EventBus for cross-domain communication
  */
 const networkStack = new NetworkStack(app, 'NetworkStack', { env });
+
+/**
+* Auth Stack (independent)
+* 
+* Base authentication infrastructure using AWS Cognito BaaS (Backend as a Service):
+* - User Pool for user management and authentication
+* - User Pool Client for frontend application access
+*/
+const authStack = new AuthStack(app, 'AuthStack', { env });
 
 /**
  * Statefull Stack with DocumentDB
@@ -91,7 +101,8 @@ const uiStack = new UiStack(app, 'UiStack', {
   transactionsApiUrl: transactionsStack.api.url,
   loanApiUrl: loansStack.api.url,
   atmApiUrl: atmStack.api.url, 
-  usersApiUrl: ""
+  cognitoPoolId: authStack.userPool.userPoolId,
+  cognitoClientId: authStack.userPoolClient.userPoolClientId
 });
 
 
@@ -115,6 +126,8 @@ documentDbStack.addDependency(networkStack);
 });
 // ATM Domain stack depends on NetworkStack only for VPC.
 atmStack.addDependency(networkStack);
+// UI Stack depends on Auth Stack for User Management with AWS Cognito BaaS
+uiStack.addDependency(authStack);
 
 /**
  * Global tags for resource tagging
