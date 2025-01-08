@@ -10,7 +10,7 @@ import {
   LambdaConfig,
   ApiRoute,
   LambdaLayerConfig
-} from './types';
+} from '../types';
 import { LambdaBuilder } from './lambda-builder';
 import { DomainPattern } from './domain-pattern';
 

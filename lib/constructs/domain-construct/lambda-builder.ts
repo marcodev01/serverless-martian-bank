@@ -1,6 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import { LambdaConfig } from './types';
+import { LambdaConfig } from '../types';
 import { DomainBuilder } from './domain-builder';
 
 /**

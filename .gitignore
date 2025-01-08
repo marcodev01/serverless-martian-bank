@@ -5,10 +5,11 @@ node_modules
 .venv_martianbank
 show_structure.sh
 build
+lib/config/database.json
 
 # Unignore .js files in /serverless-martian-bank/ui
 !ui/**/*.js
-
+# Unignore atm_locator.js lambda function
 !domains/atm/application/handlers/atm_locator.js
 
 # CDK asset staging directory
