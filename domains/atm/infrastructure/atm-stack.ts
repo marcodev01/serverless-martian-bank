@@ -29,7 +29,7 @@ export class AtmStack extends cdk.Stack {
         handler: 'atm_locator.handler',
         handlerPath: handlerPath
       })
-        .withRuntime(lambda.Runtime.NODEJS_18_X)
+        .withRuntime(lambda.Runtime.NODEJS_22_X)
         .withMemory(128)
         .exposedVia('/atm', 'POST')
         .exposedVia('/atm/{id}', 'GET')
