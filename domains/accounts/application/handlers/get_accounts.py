@@ -11,6 +11,7 @@ def get_mongodb_client():
     return MongoClient(mongodb_uri)
 
 def handler(event, context):
+    client = None
     try:
         # Parse request body
         body = json.loads(event['body'])
@@ -56,5 +57,5 @@ def handler(event, context):
             'body': json.dumps({'error': str(e)})
         }
     finally:
-        if client:
+        if client is not None:
             client.close()

@@ -15,6 +15,7 @@ def get_mongodb_client():
     return MongoClient(mongodb_uri)
 
 def handler(event, context):
+    client = None
     try:
         # Parse request body
         request_data = json.loads(event['body'])

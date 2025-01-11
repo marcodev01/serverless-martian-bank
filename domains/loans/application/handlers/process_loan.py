@@ -15,6 +15,7 @@ def get_mongodb_client():
     return MongoClient(mongodb_uri)
 
 def handler(event, context):
+    client = None 
     try:
         request_data = json.loads(event['body'])
         loan_amount = float(request_data["loan_amount"])

@@ -16,10 +16,11 @@ def generate_account_number():
     return f"IBAN{random.randint(1000000000000000, 9999999999999999)}"
 
 def handler(event, context):
+    client = None
     try:
         # Parse request body
         request_data = json.loads(event['body'])
-        
+       
         # Connect to MongoDB
         client = get_mongodb_client()
         db = client["bank"]
@@ -75,4 +76,5 @@ def handler(event, context):
             })
         }
     finally:
-        client.close()
+        if client is not None:
+            client.close()

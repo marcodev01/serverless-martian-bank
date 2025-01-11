@@ -11,15 +11,16 @@ def get_mongodb_client():
     return MongoClient(mongodb_uri)
 
 def handler(event, context):
+    client = None
     try:
         # Parse request body
         request_data = json.loads(event['body'])
-
+        
         # Connect to MongoDB
         client = get_mongodb_client()
         db = client["bank"]
         collection = db["accounts"]
-
+        
         # Get account details
         account = collection.find_one({"account_number": request_data["account_number"]})
         
@@ -49,4 +50,5 @@ def handler(event, context):
             'body': json.dumps({'error': str(e)})
         }
     finally:
-        client.close()
+        if client is not None:
+            client.close()

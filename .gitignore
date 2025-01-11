@@ -6,6 +6,8 @@ node_modules
 show_structure.sh
 build
 lib/config/database.json
+__pycache__
+.pytest_cache
 
 # Unignore .js files in /serverless-martian-bank/ui
 !ui/**/*.js
