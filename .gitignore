@@ -13,9 +13,11 @@ __pycache__
 !ui/**/*.js
 # Unignore atm_locator.js lambda function
 !domains/atm/application/handlers/atm_locator.js
+!test/handlers/atm/atm_locator.test.js
 
 # CDK asset staging directory
 .cdk.staging
 cdk.out
 cdk.context.json
 dist
+__snapshots__
