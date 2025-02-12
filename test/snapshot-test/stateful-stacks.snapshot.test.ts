@@ -5,7 +5,7 @@ import { AuthStack } from '../../lib/stacks/auth-stack';
 import { NetworkStack } from '../../lib/stacks/network-stack';
 import { DocumentDBStack } from '../../lib/stacks/documentdb-stack';
 
-describe('Infrastructure Stacks Snapshot Tests', () => {
+describe('Stateful Stacks Snapshot Tests', () => {
   let app: cdk.App;
   let vpc: ec2.IVpc;
   let testStack: cdk.Stack;
@@ -14,14 +14,6 @@ describe('Infrastructure Stacks Snapshot Tests', () => {
     app = new cdk.App();
     testStack = new cdk.Stack(app, 'TestStack', {
       env: { account: '123456789012', region: 'us-east-1' }
-    });
-
-    vpc = ec2.Vpc.fromVpcAttributes(testStack, 'TestVPC', {
-      vpcId: 'vpc-12345',
-      availabilityZones: ['us-east-1a', 'us-east-1b'],
-      privateSubnetIds: ['subnet-12345', 'subnet-67890'],
-      publicSubnetIds: ['subnet-public1', 'subnet-public2'],
-      vpcCidrBlock: '10.0.0.0/16'
     });
   });
 
@@ -44,6 +36,14 @@ describe('Infrastructure Stacks Snapshot Tests', () => {
   });
 
   test('DocumentDBStack snapshot', () => {
+    vpc = ec2.Vpc.fromVpcAttributes(testStack, 'TestVPC', {
+      vpcId: 'vpc-12345',
+      availabilityZones: ['eu-central-1a', 'eu-central-1b'],
+      privateSubnetIds: ['subnet-12345', 'subnet-67890'],
+      publicSubnetIds: ['subnet-public1', 'subnet-public2'],
+      vpcCidrBlock: '10.0.0.0/16'
+    });
+
     const stack = new DocumentDBStack(app, 'TestDocumentDBStack', {
       vpc,
       env: { account: '123456789012', region: 'us-east-1' }

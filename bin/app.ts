@@ -43,16 +43,16 @@ const networkStack = new NetworkStack(app, 'NetworkStack', { env });
 const authStack = new AuthStack(app, 'AuthStack', { env });
 
 /**
- * Statefull Stack with DocumentDB
+ * DocumentDB Stack
  * 
- * Shared database stack providing MongoDB-compatible document storage:
+ * Stateful stack with shared database providing MongoDB-compatible document storage:
  * - DocumentDB cluster in private subnets
  * - Security group configuration
  */
 const documentDbStack = new DocumentDBStack(app, 'DocumentDBStack', { env, vpc: networkStack.vpc } );
 
 /**
- * Stateless Domain Stacks
+ * Domain Stacks
  * 
  * Stateless stacks for Application Domains:
  * - Serverless API with domain spefiic logic provided by Lambda functions
