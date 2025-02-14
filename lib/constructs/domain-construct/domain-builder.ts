@@ -9,10 +9,11 @@ import {
   DocumentDbConfig,
   LambdaConfig,
   ApiRoute,
-  LambdaLayerConfig
+  LambdaLayerConfig,
 } from '../types';
 import { LambdaBuilder } from './lambda-builder';
 import { DomainPattern } from './domain-pattern';
+import { WorkflowBuilder } from './workflow-builder';
 
 /**
  * The `DomainBuilder` class provides a fluent API based on the Builder pattern to construct and configure domain-specific services. 
@@ -20,16 +21,20 @@ import { DomainPattern } from './domain-pattern';
  * Addionally, the builder validates the configuration before resource creation, ensuring that all required components are provided.
  */
 export class DomainBuilder {
+  private readonly scope: Construct;
   private readonly domainName: string;
-  private vpc: ec2.IVpc;
-  private eventBus?: events.EventBus;
-  private apiConfig?: ApiConfig;
-  private dbConfig?: DocumentDbConfig;
   private readonly lambdaConfigs: Map<string, LambdaConfig> = new Map();
   private readonly lambdaLayers: LambdaLayerConfig[] = [];
   private readonly apiRoutes: ApiRoute[] = [];
 
-  constructor(props: { domainName: string} ) {
+  private vpc?: ec2.IVpc;
+  private eventBus?: events.EventBus;
+  private apiConfig?: ApiConfig;
+  private dbConfig?: DocumentDbConfig;
+  private workflowBuilder?: WorkflowBuilder;
+
+  constructor(scope: Construct, props: { domainName: string } ) {
+    this.scope = scope;
     this.domainName = props.domainName;
   }
 
@@ -75,6 +80,16 @@ export class DomainBuilder {
   }
 
   /**
+   * Configures a generic workflow with the specified Lambda steps.
+   * @param id The name of the workflow.
+   * @returns A `WorkflowBuilder` instance to further configure the workflow.
+   */
+    public withWorkflow(id: string): WorkflowBuilder {
+      this.workflowBuilder = new WorkflowBuilder(this.scope, id, this);
+      return this.workflowBuilder;
+  }
+
+  /**
    * Adds a shared Lambda layer to the domain. Lambda layers are used to share code or libraries
    * across multiple Lambda functions, improving reusability and maintainability.
    * @param config Configuration object for the Lambda layer.
@@ -92,10 +107,7 @@ export class DomainBuilder {
    * @param config Configuration for the Lambda handler.
    * @returns A `LambdaBuilder` instance for further customization of the Lambda function.
    */
-  public addLambda(name: string, config: {
-    handler: string;
-    handlerPath: string;
-  }): LambdaBuilder {
+  public addLambda(name: string, config: { handler: string, handlerPath: string } ): LambdaBuilder {
     const lambdaConfig: LambdaConfig = {
       name,
       handler: config.handler,
@@ -111,41 +123,14 @@ export class DomainBuilder {
 
   /**
    * Adds a new API route to the domain, linking it to a Lambda function.
-   * @param path The API route path (e.g., `/users`).
-   * @param method The HTTP method (e.g., `GET`, `POST`).
-   * @param handlerName The name of the Lambda function to handle this route.
+   * @param route The API route configuration.
    */
-  public addApiRoute(path: string, method: string, handlerName: string): void {
-    if (!this.lambdaConfigs.has(handlerName)) {
-      throw new Error(`Lambda handler ${handlerName} not found. Please define the lambda first.`);
+  public addApiRoute(route: ApiRoute): void {
+    if (route.type === 'lambda' && !this.lambdaConfigs.has(route.target)) {
+      throw new Error(`Lambda handler ${route.target} not found. Please define the lambda first.`);
     }
-    this.apiRoutes.push({ path, method, handlerName });
-  }
-
-  /**
-   * Validates the domain configuration to ensure all required components are provided.
-   * Throws an error if any mandatory configuration is missing.
-   */
-  private validateConfiguration(): void {
-    if (!this.vpc) {
-      throw new Error('VPC must be specified using withVpc()');
-    }
-    if (!this.apiConfig) {
-      throw new Error('API must be specified using withApi()');
-    }
-    if (this.lambdaConfigs.size === 0) {
-      throw new Error('At least one Lambda function must be configured using addLambda()');
-    }
-    for (const [lambdaName, lambdaConfig] of this.lambdaConfigs) {
-      const hasEventConsumer = lambdaConfig.eventConsumers && lambdaConfig.eventConsumers.length > 0;
-      const hasRoute = this.apiRoutes.some(route => route.handlerName === lambdaName);
-  
-      if (!hasEventConsumer && !hasRoute) {
-        throw new Error(`Lambda function "${lambdaName}" must have at least one API route configured or consume events`);
-      }
-    }
-  }
-
+    this.apiRoutes.push(route);
+}
   /**
    * Builds and returns a `DomainPattern` instance based on the current configuration.
    * @param scope The CDK construct scope.
@@ -156,16 +141,59 @@ export class DomainBuilder {
     this.validateConfiguration();
 
     const props: DomainStackProps = {
-      domainName: this.domainName,
-      vpc: this.vpc!,
-      eventBus: this.eventBus,
-      apiConfig: this.apiConfig,
-      dbConfig: this.dbConfig,
-      lambdaConfigs: Array.from(this.lambdaConfigs.values()),
-      lambdaLayers: this.lambdaLayers,
-      apiRoutes: this.apiRoutes
+        domainName: this.domainName,
+        vpc: this.vpc!,
+        eventBus: this.eventBus,
+        apiConfig: this.apiConfig,
+        dbConfig: this.dbConfig,
+        lambdaConfigs: Array.from(this.lambdaConfigs.values()),
+        lambdaLayers: this.lambdaLayers,
+        workflowBuilder: this.workflowBuilder,
+        apiRoutes: this.apiRoutes
     };
 
     return new DomainPattern(scope, id, props);
-  }
+}
+  
+    /**
+     * Validates the domain configuration to ensure all required components are provided.
+     * Throws an error if any mandatory configuration is missing.
+     */
+    private validateConfiguration(): void {
+      if (!this.vpc) {
+        throw new Error('VPC must be specified using withVpc()');
+      }
+      if (!this.apiConfig) {
+        throw new Error('API must be specified using withApi()');
+      }
+      if (this.lambdaConfigs.size === 0) {
+        throw new Error('At least one Lambda function must be configured using addLambda()');
+      }
+  
+      // Validate regular Lambda functions
+      for (const [lambdaName, lambdaConfig] of this.lambdaConfigs) {
+        const isWorkflowLambda = lambdaName.includes('StepFunction') && this.workflowBuilder?.hasStep(lambdaName.replace('StepFunction', ''));
+        
+        if (isWorkflowLambda) continue;
+  
+        const hasEventConsumer = lambdaConfig.eventConsumers && lambdaConfig.eventConsumers.length > 0;
+        const hasRoute = this.apiRoutes.some(route => route.target === lambdaName);
+        
+        if (!hasEventConsumer && !hasRoute) {
+          throw new Error(`Lambda function "${lambdaName}" must have at least one API route configured or consume events`);
+        }
+      }
+  
+      // Validate workflow if exists
+      if (this.workflowBuilder) {
+        if (!this.workflowBuilder.hasSteps()) {
+          throw new Error('Workflow must have at least one step configured');
+        }
+  
+        const workflowRoutes = this.apiRoutes.filter(route => route.type === 'workflow');
+        if (workflowRoutes.length === 0) {
+          throw new Error('Workflow must have at least one API route configured');
+        }
+      }
+    }
 }

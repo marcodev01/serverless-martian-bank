@@ -6,7 +6,6 @@ import datetime
 from unittest.mock import MagicMock, patch
 from bson.objectid import ObjectId
 
-# Fügen Sie den Lambda-Code-Pfad zum Python-Path hinzu
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../../domains/accounts/application/handlers'))
 
 from create_account import handler, generate_account_number

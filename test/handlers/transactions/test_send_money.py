@@ -7,14 +7,13 @@ from bson import ObjectId
 from datetime import datetime
 from decimal import Decimal
 
-# Pfade hinzufügen
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.join(current_dir, '../../..')
 lambda_path = os.path.join(project_root, 'domains/transactions/application/handlers')
 events_path = os.path.join(project_root, 'domains/transactions/domain')
 sys.path.extend([lambda_path, events_path])
 
-# Mock für TransactionCompletedEvent
+# Mock for TransactionCompletedEvent
 class MockTransactionEvent:
     def __init__(self, from_account, to_account, amount, reason):
         self.from_account = from_account
@@ -34,7 +33,7 @@ class MockTransactionEvent:
             })
         }
 
-# Mock das events-Modul
+# Mock events
 sys.modules['events.transaction_completed'] = MagicMock()
 sys.modules['events.transaction_completed'].TransactionCompletedEvent = MockTransactionEvent
 

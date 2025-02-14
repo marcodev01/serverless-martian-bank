@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, patch
 from bson import ObjectId
 from datetime import datetime
 
-# Pfad zur Lambda-Funktion
 current_dir = os.path.dirname(os.path.abspath(__file__))
 lambda_path = os.path.join(current_dir, '../../../domains/transactions/application/handlers')
 sys.path.append(lambda_path)

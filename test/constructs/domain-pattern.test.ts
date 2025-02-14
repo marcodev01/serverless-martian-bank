@@ -57,7 +57,8 @@ describe('DomainPattern', () => {
       apiRoutes: [{
         path: '/test',
         method: 'GET',
-        handlerName: 'TestFunction'
+        target: 'TestFunction',
+        type: 'lambda'
       }]
     };
 
@@ -113,7 +114,8 @@ describe('DomainPattern', () => {
       apiRoutes: [{
         path: '/test',
         method: 'GET',
-        handlerName: 'TestFunction'
+        target: 'TestFunction',
+        type: 'lambda'
       }]
     };
 
@@ -153,7 +155,8 @@ describe('DomainPattern', () => {
       apiRoutes: [{
         path: '/test',
         method: 'GET',
-        handlerName: 'TestFunction'
+        target: 'TestFunction',
+        type: 'lambda'
       }]
     };
 

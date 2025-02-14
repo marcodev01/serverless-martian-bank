@@ -5,7 +5,6 @@ import json
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
-# Fügen Sie die Pfade für Lambda und Layers hinzu
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.join(current_dir, '../../..')
 lambda_path = os.path.join(project_root, 'domains/accounts/application/handlers')

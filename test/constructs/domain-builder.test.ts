@@ -32,7 +32,7 @@ describe('DomainBuilder', () => {
 
   test('builds domain with minimum required configuration', () => {
     // Arrange
-    const builder = new DomainBuilder({ domainName: 'test-domain' })
+    const builder = new DomainBuilder(stack, { domainName: 'test-domain' })
       .withVpc(vpc)
       .withApi({ name: 'test-api' });
 
@@ -74,7 +74,7 @@ describe('DomainBuilder', () => {
 
   test('throws error when required components are missing', () => {
     // Arrange
-    const builder = new DomainBuilder({ domainName: 'test-domain' });
+    const builder = new DomainBuilder(stack, { domainName: 'test-domain' });
 
     // Act & Assert
     expect(() => builder.build(stack, 'TestDomain'))
@@ -84,14 +84,14 @@ describe('DomainBuilder', () => {
   test('configures event bus integration correctly', () => {
     // Arrange
     const eventBus = new events.EventBus(stack, 'TestEventBus');
-    const builder = new DomainBuilder({ domainName: 'test-domain' })
+    const builder = new DomainBuilder(stack, { domainName: 'test-domain' })  
       .withVpc(vpc)
       .withApi({ name: 'test-api' })
       .withEventBus(eventBus);
 
     builder.addLambda('TestProducer', {
       handler: 'index.handler',
-      handlerPath: 'dummy-path' // This path will be mocked
+      handlerPath: 'dummy-path'
     })
     .producesEvents()
     .exposedVia('/test', 'POST');

@@ -2,6 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as events from 'aws-cdk-lib/aws-events';
+import { WorkflowBuilder } from './domain-construct/workflow-builder';
 
 export interface ApiConfig {
   name?: string;
@@ -9,15 +10,30 @@ export interface ApiConfig {
   cors?: { allowOrigins: string[], allowMethods: string[] };
 }
 
-export interface ApiRoute {
-  path: string;
-  method: string;
-  handlerName: string;
-}
-
 export interface DocumentDbConfig {
   clusterEndpoint: string;
   securityGroupId: string;
+}
+
+export interface ApiRoute {
+  path: string;
+  method: string;
+  target: string; // Can be either a lambda name or workflow id
+  type: 'lambda' | 'workflow';
+}
+
+export interface BaseWorkflow<T> { 
+  id: string; 
+  steps: { 
+    name: string; 
+    lambda: T; 
+  }[] 
+};
+
+export interface WorkflowConfig extends BaseWorkflow<string> { 
+}
+
+export interface Workflow extends BaseWorkflow<lambda.IFunction> { 
 }
 
 export interface LambdaLayerConfig {
@@ -51,5 +67,6 @@ export interface DomainStackProps {
   readonly dbConfig?: DocumentDbConfig;
   readonly lambdaConfigs: LambdaConfig[];
   readonly lambdaLayers: LambdaLayerConfig[];
+  readonly workflowBuilder?: WorkflowBuilder;
   readonly apiRoutes: ApiRoute[];
 }

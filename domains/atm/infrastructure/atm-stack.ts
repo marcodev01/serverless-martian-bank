@@ -23,7 +23,7 @@ export class AtmStack extends cdk.Stack {
 
     const handlerPath = path.resolve(__dirname, '../application/handlers');
 
-    const atmDomain = new DomainBuilder({ domainName: 'atm' })
+    const atmDomain = new DomainBuilder(this, { domainName: 'atm' })
       .withVpc(props.vpc)
       .addLambda('AtmLocatorFunction', {
         handler: 'atm_locator.handler',

@@ -5,7 +5,6 @@ import json
 from unittest.mock import MagicMock, patch
 from bson import ObjectId
 
-# Fügen Sie den Lambda-Code-Pfad zum Python-Path hinzu
 current_dir = os.path.dirname(os.path.abspath(__file__))
 lambda_path = os.path.join(current_dir, '../../../domains/accounts/application/handlers')
 sys.path.append(lambda_path)

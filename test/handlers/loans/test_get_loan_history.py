@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, patch
 from bson import ObjectId
 from datetime import datetime
 
-# Pfad zur Lambda-Funktion
 current_dir = os.path.dirname(os.path.abspath(__file__))
 lambda_path = os.path.join(current_dir, '../../../domains/loans/application/handlers')
 sys.path.append(lambda_path)
@@ -108,7 +107,7 @@ def test_missing_email_field(mock_mongodb):
     # Arrange
     mock_client, mock_collection = mock_mongodb
     event = {
-        'body': json.dumps({})  # Fehlendes email-Feld
+        'body': json.dumps({})  # missing email field
     }
     
     # Act

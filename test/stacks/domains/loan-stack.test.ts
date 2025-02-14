@@ -137,46 +137,29 @@ describe('LoansStack', () => {
   });
 
   describe('Event Configuration', () => {
-    test('ProcessLoanFunction is configured as event producer', () => {
-      const functions = template.findResources('AWS::Lambda::Function');
-      const processLoanFunction = Object.values(functions).find(func => 
-        func.Properties.Handler.includes('process_loan')
-      );
-      
-      expect(processLoanFunction?.Properties.Environment.Variables.EVENT_BUS_NAME).toBeDefined();
-      expect(processLoanFunction?.Properties.Environment.Variables.EVENT_SOURCE).toBe('martian-bank.loans');
-
-      // Check event producer permissions
+    test('ProcessLoanFunction in workflow is configured as event producer', () => {
+      // Check if the ProcessLoan Lambda in Step Functions has event permissions
       template.hasResourceProperties('AWS::IAM::Policy', {
         PolicyDocument: {
-          Statement: [
-            Match.objectLike({
-              Action: "docdb:connect",
-              Effect: "Allow",
-              Resource: Match.anyValue()
-            }),
+          Statement: Match.arrayWith([
             Match.objectLike({
               Action: "events:PutEvents",
               Effect: "Allow",
               Resource: Match.anyValue()
             })
-          ],
-          Version: "2012-10-17"
+          ])
         },
-        PolicyName: Match.stringLikeRegexp("LoansDomainProcessLoanFunction")
+        PolicyName: Match.stringLikeRegexp("ProcessLoanStepFunction")
       });
-    });
 
-    test('other functions do not have event producer permissions', () => {
-      const policies = template.findResources('AWS::IAM::Policy');
-      
-      Object.entries(policies).forEach(([key, policy]) => {
-        if (!key.includes('ProcessLoan')) {
-          const statements = policy.Properties.PolicyDocument.Statement;
-          const hasEventPermission = statements.some((stmt: any) => 
-            stmt.Action === 'events:PutEvents'
-          );
-          expect(hasEventPermission).toBeFalsy();
+      // Verify environment variables
+      template.hasResourceProperties('AWS::Lambda::Function', {
+        Handler: Match.stringLikeRegexp('process_loan'),
+        Environment: {
+          Variables: Match.objectLike({
+            EVENT_BUS_NAME: Match.anyValue(),
+            EVENT_SOURCE: 'martian-bank.loans'
+          })
         }
       });
     });
@@ -189,62 +172,94 @@ describe('LoansStack', () => {
         Description: 'API for loan management'
       });
     });
-
-    test('creates correct API routes with proper integrations', () => {
-      // Check resources
+  
+    test('creates correct API routes with Step Functions integration', () => {
+      // Check resources exist
       template.hasResourceProperties('AWS::ApiGateway::Resource', {
         PathPart: 'process'
       });
-
+  
       template.hasResourceProperties('AWS::ApiGateway::Resource', {
         PathPart: 'history'
       });
-
-      // Check HTTP methods
-      template.hasResourceProperties('AWS::ApiGateway::Method', {
+  
+      // Check Step Functions POST integration
+      template.hasResourceProperties('AWS::ApiGateway::Method', Match.objectLike({
         HttpMethod: 'POST',
         Integration: {
-          Type: 'AWS_PROXY',
+          Type: 'AWS',
           IntegrationHttpMethod: 'POST'
         }
-      });
-
-      template.hasResourceProperties('AWS::ApiGateway::Method', {
+      }));
+  
+      // Check Lambda GET integration
+      template.hasResourceProperties('AWS::ApiGateway::Method', Match.objectLike({
         HttpMethod: 'GET',
         Integration: {
           Type: 'AWS_PROXY',
           IntegrationHttpMethod: 'POST'
         }
+      }));
+    });
+  });
+  
+  describe('Step Functions Configuration', () => {
+    test('creates Step Functions state machine', () => {
+      template.hasResourceProperties('AWS::StepFunctions::StateMachine', {
+        DefinitionString: {
+          'Fn::Join': [
+            '',
+            Match.arrayWith([
+              Match.stringLikeRegexp('.*StartAt.*States.*')
+            ])
+          ]
+        }
+      });
+    });
+    
+  
+    test('state machine has correct IAM permissions', () => {
+      template.hasResourceProperties('AWS::IAM::Role', {
+        AssumeRolePolicyDocument: Match.objectLike({
+          Statement: [
+            Match.objectLike({
+              Action: "sts:AssumeRole",
+              Effect: "Allow",
+              Principal: {
+                Service: "states.amazonaws.com"
+              }
+            })
+          ]
+        })
       });
     });
   });
 
   describe('Lambda Functions', () => {
     test('creates all required Lambda functions with correct configuration', () => {
-      template.resourceCountIs('AWS::Lambda::Function', 2);
+      template.resourceCountIs('AWS::Lambda::Function', 3); // Updated count
 
-      // ProcessLoan Function
+      // Check workflow step functions
+      template.hasResourceProperties('AWS::Lambda::Function', {
+        Handler: Match.stringLikeRegexp('get_account_details'),
+        Runtime: lambda.Runtime.PYTHON_3_9.name
+      });
+
       template.hasResourceProperties('AWS::Lambda::Function', {
         Handler: Match.stringLikeRegexp('process_loan'),
         Runtime: lambda.Runtime.PYTHON_3_9.name,
         Environment: {
           Variables: Match.objectLike({
             EVENT_BUS_NAME: Match.anyValue(),
-            EVENT_SOURCE: 'martian-bank.loans',
-            DB_URL: Match.anyValue()
+            EVENT_SOURCE: 'martian-bank.loans'
           })
         }
       });
 
-      // GetLoanHistory Function
+      // Check regular functions
       template.hasResourceProperties('AWS::Lambda::Function', {
         Handler: Match.stringLikeRegexp('get_loan_history'),
-        Runtime: lambda.Runtime.PYTHON_3_9.name,
-        Environment: {
-          Variables: Match.objectLike({
-            DB_URL: Match.anyValue()
-          })
-        }
+        Runtime: lambda.Runtime.PYTHON_3_9.name
       });
     });
 

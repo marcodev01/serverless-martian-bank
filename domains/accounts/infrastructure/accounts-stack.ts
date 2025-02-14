@@ -26,7 +26,7 @@ export class AccountsStack extends cdk.Stack {
     const layersPath = path.resolve(__dirname, '../../../lib/layers/python');
     const handlerPath = path.resolve(__dirname, '../application/handlers');
 
-    const accountsDomain = new DomainBuilder({ domainName: 'accounts' })
+    const accountsDomain = new DomainBuilder(this, { domainName: 'accounts'  })
       .withVpc(props.vpc)
       .withDocumentDb({
         clusterEndpoint: cdk.Fn.importValue('SharedDocDbEndpoint'),

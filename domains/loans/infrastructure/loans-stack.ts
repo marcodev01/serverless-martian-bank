@@ -25,8 +25,16 @@ export class LoansStack extends cdk.Stack {
 
     const layersPath = path.resolve(__dirname, '../../../lib/layers/python');
     const handlerPath = path.resolve(__dirname, '../application/handlers');
+    /*
+     * Note: By using an AWS Step Functions workflow, the separation of concerns principle is enforced,  
+     * as functions in the loans domain no longer access the accounts domain's database directly.  
+     * However, this approach introduces an explicit dependency from the loans domain to the accounts domain.  
+     * Unlike direct cross-domain database access within Lambda functions, where dependencies remain implicit,  
+     * this workflow-based approach makes the dependency explicit and manageable.
+    */
+    const accountsHandlerPath = path.resolve(__dirname, '../../accounts/application/handlers');
 
-    const loansDomain = new DomainBuilder({ domainName: 'loans' })
+    const loansDomain = new DomainBuilder(this, { domainName: 'loans' })
       .withVpc(props.vpc)
       .withDocumentDb({
         clusterEndpoint: cdk.Fn.importValue('SharedDocDbEndpoint'),
@@ -38,19 +46,16 @@ export class LoansStack extends cdk.Stack {
         compatibleRuntimes: [lambda.Runtime.PYTHON_3_9],
         description: 'Shared utilities layer'
       })
-      .addLambda('ProcessLoanFunction', {
-        handler: 'process_loan.handler',
-        handlerPath: handlerPath
-      })
-        .producesEvents()
-        .exposedVia('/loan/process', 'POST')
-        .and()
-      .addLambda('GetLoanHistoryFunction', {
-        handler: 'get_loan_history.handler',
-        handlerPath: handlerPath
-      })
-        .exposedVia('/loan/history', 'GET')
-        .and()
+      .addLambda('GetLoanHistoryFunction', { handler: 'get_loan_history.handler', handlerPath: handlerPath })
+      .exposedVia('/loan/history', 'GET')
+      .and()
+      .withWorkflow('LoanProcessingWorkflow')
+      .addStep('GetAccountDetails', { handler: 'get_account_details.handler', handlerPath: accountsHandlerPath })
+      .addStep('ProcessLoan', { handler: 'process_loan.handler', handlerPath: handlerPath },
+        lambdaBuilder => lambdaBuilder.producesEvents()
+      )
+      .exposedVia('/loan/process', 'POST')
+      .and()
       .withApi({
         name: 'Loans Service',
         description: 'API for loan management',

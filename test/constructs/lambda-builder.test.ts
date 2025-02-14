@@ -11,7 +11,7 @@ describe('LambdaBuilder', () => {
 
   beforeEach(() => {
     stack = new Stack();
-    domainBuilder = new DomainBuilder({ domainName: 'test-domain' });
+    domainBuilder = new DomainBuilder(stack, { domainName: 'test-domain' });
     lambdaConfig = {
       name: 'TestFunction',
       handler: 'index.handler',
@@ -53,7 +53,8 @@ describe('LambdaBuilder', () => {
     expect((domainBuilder as any).apiRoutes).toContainEqual({
       path: '/test',
       method: 'POST',
-      handlerName: 'TestFunction'
+      target: 'TestFunction',
+      type: 'lambda'
     });
   });
 

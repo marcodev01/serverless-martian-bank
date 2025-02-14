@@ -6,7 +6,8 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
 import { Construct } from 'constructs';
-import { DomainStackProps } from '../types';
+import { ApiRoute, DomainStackProps } from '../types';
+import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 
 
 /**
@@ -18,17 +19,25 @@ export class DomainPattern extends Construct {
   public readonly api: apigateway.RestApi;
   public readonly lambdaFunctions: { [key: string]: lambda.Function };
   private readonly lambdaLayers: { [key: string]: lambda.LayerVersion } | null;
+  public readonly workflow?: sfn.StateMachine | null;
+  private readonly apiRoutes: ApiRoute[]; 
 
   constructor(scope: Construct, id: string, props: DomainStackProps) {
     super(scope, id);
 
+    this.apiRoutes = props.apiRoutes;
     this.lambdaLayers = this.createLambdaLayers(props);
-
     this.lambdaFunctions = this.createLambdaHandlers(props);
-
     this.configureEventIntegration(props);
-
     this.api = this.createApiGateway(props);
+
+    // Create workflow if configured
+    if (props.workflowBuilder) {
+      this.workflow = props.workflowBuilder.build();
+    }
+
+    // Configure API integrations by mapping routes to either Lambda functions or Step Functions (workflows)
+    this.configureApiIntegrations();
   }
 
   /**
@@ -63,7 +72,7 @@ export class DomainPattern extends Construct {
    */
   private createLambdaHandlers(props: DomainStackProps): { [key: string]: lambda.Function } {
     const handlers: { [key: string]: lambda.Function } = {};
-    
+
     props.lambdaConfigs.forEach(config => {
       const securityGroups = [];
 
@@ -96,7 +105,7 @@ export class DomainPattern extends Construct {
       const handler = new lambda.Function(this, config.name, {
         runtime: config.runtime || lambda.Runtime.PYTHON_3_9, // Default to Python 3.9 if runtime is not specified
         vpc: props.vpc,
-        layers: this.lambdaLayers ? Object.values(this.lambdaLayers): undefined,
+        layers: this.lambdaLayers ? Object.values(this.lambdaLayers) : undefined,
         securityGroups,
         handler: config.handler,
         code: lambda.Code.fromAsset(config.handlerPath),
@@ -116,35 +125,23 @@ export class DomainPattern extends Construct {
     return handlers;
   }
 
-  /**
-   * Configures API Gateway to expose the Lambda functions as REST endpoints.
-   * @param props Configuration for the API Gateway.
+    /**
+   * Creates the API Gateway for handling HTTP requests.
+   * @param props API configuration.
    * @returns The created API Gateway instance.
    */
   private createApiGateway(props: DomainStackProps): apigateway.RestApi {
-
     /* Level 2 Construct with aws-apigateway */
     const api = new apigateway.RestApi(this, 'Api', {
-      restApiName: props.apiConfig?.name || `${props.domainName} Service`, // Set API name or default to domain name
-      description: props.apiConfig?.description, // Optional description for the API
-      defaultCorsPreflightOptions: props.apiConfig?.cors ? 
-      { allowOrigins: props.apiConfig.cors.allowOrigins, allowMethods: props.apiConfig.cors.allowMethods } : 
-      { allowOrigins: apigateway.Cors.ALL_ORIGINS, allowMethods: apigateway.Cors.ALL_METHODS }
-    });
-
-    // Map API routes to their respective Lambda functions
-    props.apiRoutes.forEach(route => {
-      const handler = this.lambdaFunctions[route.handlerName];
-      if (!handler) {
-        throw new Error(`Handler ${route.handlerName} not found`);
-      }
-
-      const resource = api.root.resourceForPath(route.path);
-      resource.addMethod(route.method, new apigateway.LambdaIntegration(handler));
+        restApiName: props.apiConfig?.name || `${props.domainName} Service`,
+        description: props.apiConfig?.description,
+        defaultCorsPreflightOptions: props.apiConfig?.cors ?
+            { allowOrigins: props.apiConfig.cors.allowOrigins, allowMethods: props.apiConfig.cors.allowMethods } :
+            { allowOrigins: apigateway.Cors.ALL_ORIGINS, allowMethods: apigateway.Cors.ALL_METHODS }
     });
 
     return api;
-  }
+}
 
   /**
    * Configures event-driven architecture using EventBridge rules and Lambda functions.
@@ -202,4 +199,72 @@ export class DomainPattern extends Construct {
       })
     );
   }
+
+   /**
+   * Configures API integrations by mapping API routes to either Lambda functions or Step Functions.
+   */
+  private configureApiIntegrations(): void {
+    if (!this.api) return;
+
+    this.apiRoutes.forEach(route => {
+        const resource = this.api.root.resourceForPath(route.path);
+        
+        if (route.type === 'lambda') {
+            // Lambda integration
+            const lambda = this.lambdaFunctions[route.target];
+            if (!lambda) {
+                throw new Error(`Lambda function "${route.target}" not found`);
+            }
+            resource.addMethod(route.method, 
+                new apigateway.LambdaIntegration(lambda)
+            );
+        } else {
+            // Workflow integration
+            const workflow = this.workflow;
+            if (!workflow) return;
+
+            const apiRole = new iam.Role(this, `${route.target}ApiRole`, {
+                assumedBy: new iam.ServicePrincipal('apigateway.amazonaws.com'),
+                inlinePolicies: {
+                    'StepFunctionsExecute': new iam.PolicyDocument({
+                        statements: [
+                            new iam.PolicyStatement({
+                                actions: ['states:StartExecution'],
+                                resources: [workflow.stateMachineArn]
+                            })
+                        ]
+                    })
+                }
+            });
+
+            const integration = new apigateway.AwsIntegration({
+                service: 'states',
+                action: 'StartExecution',
+                options: {
+                    credentialsRole: apiRole,
+                    requestTemplates: {
+                        'application/json': `{
+                            "input": "$util.escapeJavaScript($input.json('$'))",
+                            "stateMachineArn": "${workflow.stateMachineArn}"
+                        }`
+                    },
+                    integrationResponses: [{
+                        statusCode: '200',
+                        responseTemplates: {
+                            'application/json': `{
+                                "executionArn": "$util.parseJson($input.json('$')).executionArn",
+                                "startDate": "$util.parseJson($input.json('$')).startDate"
+                            }`
+                        }
+                    }]
+                }
+            });
+
+            resource.addMethod(route.method, integration, {
+                methodResponses: [{ statusCode: '200' }]
+            });
+        }
+    });
+}
+
 }
