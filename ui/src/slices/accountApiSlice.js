@@ -13,7 +13,7 @@ export const accountApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     createAccount: builder.mutation({
       query: (data) => ({
-        url: `${accsUrl}create`,
+        url: `${accsUrl}account/create`,
         method: "POST",
         prepareHeaders: (headers) => {
           headers.set("Content-Type", "multipart/form-data");
@@ -24,7 +24,7 @@ export const accountApiSlice = apiSlice.injectEndpoints({
     }),
     getAllAccounts: builder.mutation({
       query: (data) => ({
-        url: `${accsUrl}allaccounts`,
+        url: `${accsUrl}account/allaccounts`,
         method: "POST",
         body: data,
         prepareHeaders: (headers) => {

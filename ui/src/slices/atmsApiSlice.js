@@ -13,14 +13,14 @@ export const atmApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getAtms: builder.mutation({
       query: (data) => ({
-        url: `${atmUrl}`,
+        url: `${atmUrl}atm/`,
         method: "POST",
         body: data,
       }),
     }),
     getParticularATM: builder.mutation({
       query: (id) => ({
-        url: `${atmUrl}${id}`,
+        url: `${atmUrl}atm/${id}`,
         method: "GET",
       }),
     }),

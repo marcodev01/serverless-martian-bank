@@ -35,9 +35,11 @@ const LoginScreen = () => {
     e.preventDefault();
     try {
       const res = await login({ email, password }).unwrap();
-      console.log(res);
-      if (res.status === false) {
-        toast.error(res.message, {
+      if (res.isSignedIn) {
+        dispatch(setCredentials({ 
+          email: email,
+        }));
+        toast.success("Successfully logged in!", {
           className: "toast-container-custom",
           autoClose: 500,
           hideProgressBar: true,
@@ -47,31 +49,21 @@ const LoginScreen = () => {
           progress: undefined,
           theme: "dark",
         });
-        return;
+        navigate("/");
+      } else {
+        toast.error("Login failed", {
+          className: "toast-container-custom",
+          autoClose: 500,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+          theme: "dark",
+        });
       }
-      dispatch(setCredentials({ ...res }));
-      toast.success("Successfully logged in!", {
-        className: "toast-container-custom",
-        autoClose: 500,
-        hideProgressBar: true,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "dark",
-      });
-      navigate("/");
     } catch (err) {
-      toast.error(err?.data?.message || err.error, {
-        className: "toast-container-custom",
-        autoClose: 500,
-        hideProgressBar: true,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "dark",
-      });
+      toast.error(err?.message || "An error occurred");
     }
   };
 

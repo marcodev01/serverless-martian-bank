@@ -26,12 +26,15 @@ import TransactionScreen from "./screens/TransactionScreen.jsx";
 import LoanScreen from "./screens/LoanScreen.jsx";
 import ApplyLoan from "./screens/ApplyLoanScreen.jsx";
 import { Amplify } from 'aws-amplify';
+import ApiUrls from "./slices/apiUrls.js";
+
 
 Amplify.configure({
   Auth: {
-    region: import.meta.env.VITE_AWS_REGION,
-    userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID,
-    userPoolWebClientId: import.meta.env.VITE_COGNITO_CLIENT_ID,
+    Cognito: {
+      userPoolId: ApiUrls.VITE_COGNITO_USER_POOL_ID,
+      userPoolClientId: ApiUrls.VITE_COGNITO_CLIENT_ID
+    }
   }
 });
 

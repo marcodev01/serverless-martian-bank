@@ -12,7 +12,6 @@ export interface ApiConfig {
 
 export interface DocumentDbConfig {
   clusterEndpoint: string;
-  securityGroupId: string;
 }
 
 export interface ApiRoute {

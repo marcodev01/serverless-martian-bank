@@ -37,22 +37,16 @@ const NewAccScreen = () => {
     const form = e.currentTarget;
     if (form.checkValidity()) {
       try {
-        // Form data submission
-        const data = new FormData();
-        data.append("name", userInfo.name);
-        data.append("email_id", userInfo.email);
-        data.append("address", address);
-        data.append("government_id_type", govtId);
-        data.append("govt_id_number", govtIdNo);
-        data.append("account_type", accType);
-        console.log("Sending data: ", {
+        const data = {
           name: userInfo.name,
           email_id: userInfo.email,
-          address,
+          address: address,
           government_id_type: govtId,
           govt_id_number: govtIdNo,
-          account_type: accType,
-        })
+          account_type: accType
+        };
+
+        console.log("Sending data: ", data);
 
         const res = await createNewAccount(data).unwrap();
         if (res.response) {

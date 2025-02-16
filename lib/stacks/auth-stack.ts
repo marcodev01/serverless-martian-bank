@@ -9,6 +9,7 @@ import { Construct } from 'constructs';
 export class AuthStack extends cdk.Stack {
   public readonly userPool: cognito.UserPool;
   public readonly userPoolClient: cognito.UserPoolClient;
+  public readonly userPoolDomain: cognito.UserPoolDomain; 
 
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -30,6 +31,11 @@ export class AuthStack extends cdk.Stack {
           mutable: true,
         },
       },
+      userVerification: {
+        emailStyle: cognito.VerificationEmailStyle.LINK,
+        emailSubject: 'Verify your Martian Bank account',
+        emailBody: 'Hello! Click the link below to verify your Martian Bank account: {##Verify Email##}'
+      },
       passwordPolicy: {
         minLength: 8,
         requireLowercase: true,
@@ -49,12 +55,25 @@ export class AuthStack extends cdk.Stack {
       },
     });
 
-    // Outputs for frontend integration
-    new cdk.CfnOutput(this, 'UserPoolId', {
-      value: this.userPool.userPoolId,
+    this.userPoolDomain = this.userPool.addDomain('MartianBankDomain', {
+      cognitoDomain: {
+        domainPrefix: 'martianbank-auth-789'
+      }
     });
-    new cdk.CfnOutput(this, 'UserPoolClientId', {
+
+    // Outputs for frontend integration
+    new cdk.CfnOutput(this, 'UserPoolIdOutput', {
+      value: this.userPool.userPoolId,
+      exportName: 'UserPoolId'
+    });
+    new cdk.CfnOutput(this, 'UserPoolClientIdOutput', {
       value: this.userPoolClient.userPoolClientId,
+      exportName: 'UserPoolClientId'
+    });
+
+    new cdk.CfnOutput(this, 'UserPoolDomainOutput', {
+      value: this.userPoolDomain.domainName,
+      exportName: 'UserPoolDomain'
     });
   }
 }

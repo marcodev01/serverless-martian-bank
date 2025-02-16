@@ -1,3 +1,5 @@
+import '../stacks/domains/__mocks__/lambda-mock';
+
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
@@ -35,7 +37,8 @@ describe('Domain Stacks Snapshot Tests', () => {
     const stack = new TransactionsStack(app, 'TestTransactionsStack', {
       vpc,
       eventBus,
-      env: { account: '123456789012', region: 'us-east-1' }
+      env: { account: '123456789012', region: 'us-east-1' },
+      databaseEndpoint: 'test-cluster-endpoint'
     });
     
     const template = Template.fromStack(stack);
@@ -46,7 +49,8 @@ describe('Domain Stacks Snapshot Tests', () => {
     const stack = new AccountsStack(app, 'TestAccountsStack', {
       vpc,
       eventBus,
-      env: { account: '123456789012', region: 'us-east-1' }
+      env: { account: '123456789012', region: 'us-east-1' },
+      databaseEndpoint: 'test-cluster-endpoint'
     });
     
     const template = Template.fromStack(stack);
@@ -57,7 +61,8 @@ describe('Domain Stacks Snapshot Tests', () => {
     const stack = new LoansStack(app, 'TestLoansStack', {
       vpc,
       eventBus,
-      env: { account: '123456789012', region: 'us-east-1' }
+      env: { account: '123456789012', region: 'us-east-1' },
+      databaseEndpoint: 'test-cluster-endpoint'
     });
     
     const template = Template.fromStack(stack);

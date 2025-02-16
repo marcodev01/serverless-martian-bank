@@ -3,7 +3,7 @@ const path = require('path');
 
 // Load ATM data from static JSON file
 const loadAtmData = () => {
-  const dataPath = path.join(__dirname, '../data/atm_data.json');
+  const dataPath = path.join(__dirname, 'atm_data.json');
   const rawData = fs.readFileSync(dataPath, 'utf8');
   return JSON.parse(rawData);
 };
@@ -29,28 +29,29 @@ const getAllAtms = (body) => {
   });
 
   const filteredAtms = atms.map(atm => ({
+    _id: atm._id,
     name: atm.name,
     coordinates: atm.coordinates,
     address: atm.address,
     isOpen: atm.isOpen
   }));
 
-  return filteredAtms;
-  // return [...filteredAtms]
-  //   .sort(() => Math.random() - 0.5)
-  //   .slice(0, 4);
+  return [...filteredAtms]
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 4);
 };
 
 // Get specific ATM by ID
 const getSpecificAtm = (atmId) => {
   const atms = loadAtmData();
-  const atm = atms.find(atm => atm._id.$oid === atmId);
+  const atm = atms.find(atm => atm._id === atmId);
  
   if (!atm) {
     return null;
   }
 
   return {
+    _id: atm._id,
     coordinates: atm.coordinates,
     timings: atm.timings,
     atmHours: atm.atmHours,

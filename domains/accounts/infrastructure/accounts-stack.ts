@@ -10,6 +10,7 @@ import { DomainBuilder } from '../../../lib/constructs/domain-construct/domain-b
 interface AccountsStackProps extends cdk.StackProps {
   vpc: ec2.IVpc;
   eventBus: events.EventBus;
+  databaseEndpoint: string;
 }
 
 /**
@@ -29,8 +30,7 @@ export class AccountsStack extends cdk.Stack {
     const accountsDomain = new DomainBuilder(this, { domainName: 'accounts'  })
       .withVpc(props.vpc)
       .withDocumentDb({
-        clusterEndpoint: cdk.Fn.importValue('SharedDocDbEndpoint'),
-        securityGroupId: cdk.Fn.importValue('DocDbSecurityGroupId')
+        clusterEndpoint: props.databaseEndpoint,
       })
       .withEventBus(props.eventBus) 
       .addLambdaLayer({
@@ -45,7 +45,7 @@ export class AccountsStack extends cdk.Stack {
         .exposedVia('/account/detail', 'POST')
         .and()
       .addLambda('GetAllAccountsFunction', {
-        handler: 'get_all_accounts.handler',
+        handler: 'get_accounts.handler',
         handlerPath: handlerPath
       })
         .exposedVia('/account/allaccounts', 'POST')
@@ -72,5 +72,9 @@ export class AccountsStack extends cdk.Stack {
 
     // Expose the API Gateway as a public interface for the stack.  
     this.api = accountsDomain.api;
+    new cdk.CfnOutput(this, 'AccountsApiUrlOutput', {
+      value: accountsDomain.api.url,
+      exportName: 'AccountsApiUrl'
+    });
   }
 }

@@ -42,9 +42,13 @@ const RegisterScreen = () => {
       toast.error("Passwords do not match");
     } else {
       try {
-        const res = await register({ name, email, password }).unwrap();
-        console.log(res);
-        dispatch(setCredentials({ ...res }));
+
+        const res = await register({ 
+          name,
+          email, 
+          password 
+        }).unwrap();
+
         toast.success(
           "Congratulations! Your account with Martian Bank has been created.",
           {
@@ -61,7 +65,7 @@ const RegisterScreen = () => {
         navigate("/login");
       } catch (err) {
         console.log(err);
-        toast.error(err?.data?.message || err.error, {
+        toast.error("Registration failed", {
           className: "toast-container-custom",
           autoClose: 500,
           hideProgressBar: true,

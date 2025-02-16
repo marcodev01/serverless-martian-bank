@@ -1,5 +1,6 @@
 import { fetchBaseQuery, createApi } from "@reduxjs/toolkit/query/react";
-import { Auth } from 'aws-amplify';
+import { signIn, signUp, signOut, updateUserAttributes  } from 'aws-amplify/auth';
+
 
 export const apiSlice = createApi({
   baseQuery: fetchBaseQuery({ baseUrl: "" }),
@@ -12,7 +13,10 @@ export const userApiSlice = apiSlice.injectEndpoints({
     login: builder.mutation({
       async queryFn(data) {
         try {
-          const user = await Auth.signIn(data.email, data.password);
+          const user = await signIn({ 
+            username: data.email,
+            password: data.password 
+          });
           return { data: user };
         } catch (error) {
           return { error: error.message };
@@ -22,10 +26,15 @@ export const userApiSlice = apiSlice.injectEndpoints({
     register: builder.mutation({
       async queryFn(data) {
         try {
-          await Auth.signUp({
+          await signUp({
             username: data.email,
             password: data.password,
-            attributes: { email: data.email }
+            options: {  
+              userAttributes: {
+                email: data.email,
+                given_name: data.name  
+              }
+            }
           });
           return { data: { message: 'Registration successful' } };
         } catch (error) {
@@ -36,8 +45,22 @@ export const userApiSlice = apiSlice.injectEndpoints({
     logout: builder.mutation({
       async queryFn() {
         try {
-          await Auth.signOut();
+          await signOut();
           return { data: null };
+        } catch (error) {
+          return { error: error.message };
+        }
+      },
+    }),
+    updateUser: builder.mutation({
+      async queryFn(data) {
+        try {
+          const result = await updateUserAttributes({
+            attributes: {
+              ...data
+            }
+          });
+          return { data: result };
         } catch (error) {
           return { error: error.message };
         }
@@ -50,4 +73,5 @@ export const {
   useLoginMutation,
   useLogoutMutation,
   useRegisterMutation,
+  useUpdateUserMutation
 } = userApiSlice;

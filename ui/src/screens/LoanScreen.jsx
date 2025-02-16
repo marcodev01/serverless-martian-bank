@@ -72,8 +72,9 @@ const LoanScreen = () => {
   const { userInfo } = useSelector((state) => state.auth);
 
   const fetchLoans = async () => {
-    const data = new FormData();
-    data.append("email", userInfo.email);
+    const data = {
+      email: userInfo.email
+    };
     const res = await loanHistoryAPI(data).unwrap();
     console.log(res);
     dispatch(storeLoanHistory(res));

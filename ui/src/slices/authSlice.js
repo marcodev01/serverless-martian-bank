@@ -1,5 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
-import { Auth } from 'aws-amplify';
+import { signOut } from 'aws-amplify/auth';
 
 const initialState = {
   userInfo: localStorage.getItem('userInfo')
@@ -18,7 +18,7 @@ const authSlice = createSlice({
     logout: (state) => {
       state.userInfo = null;
       localStorage.removeItem('userInfo');
-      Auth.signOut(); 
+      signOut(); 
     },
   },
 });

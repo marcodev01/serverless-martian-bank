@@ -91,17 +91,18 @@ const ApplyLoan = () => {
     const form = e.currentTarget;
     if (form.checkValidity()) {
       try {
-        const data_loan = new FormData();
-        data_loan.append("name", userInfo.name);
-        data_loan.append("email", userInfo.email);
-        data_loan.append("account_number", accNo);
-        data_loan.append("account_type", accType);
-        data_loan.append("govt_id_number", govtIdNo);
-        data_loan.append("govt_id_type", govtId);
-        data_loan.append("loan_type", loanType);
-        data_loan.append("loan_amount", loanAmount);
-        data_loan.append("interest_rate", intRate);
-        data_loan.append("time_period", loanTime);
+        const data_loan = {
+          name: userInfo.name,
+          email: userInfo.email,
+          account_number: accNo,
+          account_type: accType,
+          govt_id_number: govtIdNo,
+          govt_id_type: govtId,
+          loan_type: loanType,
+          loan_amount: loanAmount,
+          interest_rate: intRate,
+          time_period: loanTime
+        };
         const res = await postLoanAPI(data_loan).unwrap();
         console.log(res);
         dispatch(createLoan(res));
@@ -144,8 +145,9 @@ const ApplyLoan = () => {
   };
 
   const fetchAccounts = async () => {
-    const data = new FormData();
-    data.append("email_id", userInfo.email);
+    const data = {
+      email_id: userInfo.email
+    };
     const res = await getAllAccounts(data).unwrap();
     dispatch(getAccounts(res));
   };

@@ -9,18 +9,9 @@ describe('UiStack', () => {
 
   beforeEach(() => {
     app = new cdk.App();
-    
-    const testProps = {
-      accountsApiUrl: 'https://accounts-api.test',
-      transactionsApiUrl: 'https://transactions-api.test',
-      loanApiUrl: 'https://loan-api.test',
-      atmApiUrl: 'https://atm-api.test',
-      cognitoPoolId: 'test-pool-id',
-      cognitoClientId: 'test-client-id',
+    stack = new UiStack(app, 'TestUiStack', {
       env: { account: '123456789012', region: 'eu-central-1' }
-    };
-
-    stack = new UiStack(app, 'TestUiStack', testProps);
+    });
     template = Template.fromStack(stack);
   });
 
@@ -91,8 +82,8 @@ describe('UiStack', () => {
         DestinationBucketName: Match.anyValue(),
         DistributionId: Match.anyValue(),
         ServiceToken: Match.anyValue(),
-        SourceBucketNames: Match.arrayEquals([Match.stringLikeRegexp('.*'), Match.stringLikeRegexp('.*')]),
-        SourceObjectKeys: Match.arrayEquals([Match.stringLikeRegexp('.*'), Match.stringLikeRegexp('.*')]),
+        SourceBucketNames: Match.arrayEquals([Match.stringLikeRegexp('.*')]),
+        SourceObjectKeys: Match.arrayEquals([Match.stringLikeRegexp('.*')]),
         Prune: true
       });
     });
@@ -130,23 +121,6 @@ describe('UiStack', () => {
           ])
         ]
       });
-    });
-
-    test('has all required environment variables', () => {
-      // Verify the Custom::CDKBucketDeployment resource exists
-      const deployments = template.findResources('Custom::CDKBucketDeployment');
-      expect(Object.keys(deployments)).toHaveLength(1);
-      
-      const deployment = Object.values(deployments)[0];
-      
-      // Verify the resource has the required properties
-      expect(deployment.Properties).toBeDefined();
-      expect(deployment.Properties.SourceBucketNames).toBeDefined();
-      expect(deployment.Properties.SourceObjectKeys).toBeDefined();
-      
-      // Verify we have exactly two sources (build files and env.js)
-      expect(deployment.Properties.SourceBucketNames).toHaveLength(2);
-      expect(deployment.Properties.SourceObjectKeys).toHaveLength(2);
     });
   });
 

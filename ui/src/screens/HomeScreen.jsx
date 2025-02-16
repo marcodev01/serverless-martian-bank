@@ -51,8 +51,9 @@ const HomeScreen = () => {
   }, []);
 
   const fetchAccounts = async () => {
-    const data = new FormData();
-    data.append("email_id", userInfo.email);
+    const data = {
+       email_id: userInfo.email
+    };
     const res = await getAllAccounts(data).unwrap();
     console.log(res);
     dispatch(getAccounts(res));

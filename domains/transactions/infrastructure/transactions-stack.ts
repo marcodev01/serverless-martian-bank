@@ -10,6 +10,7 @@ import { DomainBuilder } from '../../../lib/constructs/domain-construct/domain-b
 interface TransactionsStackProps extends cdk.StackProps {
   vpc: ec2.IVpc;
   eventBus: events.EventBus;
+  databaseEndpoint: string;
 }
 
 /**
@@ -29,8 +30,7 @@ export class TransactionsStack extends cdk.Stack {
     const transactionsDomain = new DomainBuilder(this, { domainName: 'transactions' })
       .withVpc(props.vpc)
       .withDocumentDb({
-        clusterEndpoint: cdk.Fn.importValue('SharedDocDbEndpoint'),
-        securityGroupId: cdk.Fn.importValue('DocDbSecurityGroupId')
+        clusterEndpoint: props.databaseEndpoint,
       })
       .withEventBus(props.eventBus)
       .addLambdaLayer({
@@ -69,5 +69,9 @@ export class TransactionsStack extends cdk.Stack {
     
     // Expose the API Gateway as a public interface for the stack.  
     this.api = transactionsDomain.api;
+    new cdk.CfnOutput(this, 'TransactionsApiUrlOutput', {
+      value: transactionsDomain.api.url,
+      exportName: 'TransactionsApiUrl'
+    });    
   }
 }

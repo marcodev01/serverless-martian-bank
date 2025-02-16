@@ -10,6 +10,7 @@ import { DomainBuilder } from '../../../lib/constructs/domain-construct/domain-b
 interface LoansStackProps extends cdk.StackProps {
   vpc: ec2.IVpc;
   eventBus: events.EventBus;
+  databaseEndpoint: string;
 }
 
 /**
@@ -37,8 +38,7 @@ export class LoansStack extends cdk.Stack {
     const loansDomain = new DomainBuilder(this, { domainName: 'loans' })
       .withVpc(props.vpc)
       .withDocumentDb({
-        clusterEndpoint: cdk.Fn.importValue('SharedDocDbEndpoint'),
-        securityGroupId: cdk.Fn.importValue('DocDbSecurityGroupId')
+        clusterEndpoint: props.databaseEndpoint
       })
       .withEventBus(props.eventBus)
       .addLambdaLayer({
@@ -65,5 +65,9 @@ export class LoansStack extends cdk.Stack {
 
     // Expose the API Gateway as a public interface for the stack.   
     this.api = loansDomain.api;
+    new cdk.CfnOutput(this, 'LoansApiUrlOutput', {
+      value: loansDomain.api.url,
+      exportName: 'LoansApiUrl'
+    });    
   }
 }

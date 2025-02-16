@@ -35,7 +35,7 @@ export class AccountsStackPlain extends cdk.Stack {
     const handlerPath = path.resolve(__dirname, '../application/handlers');
 
     // Import shared resources
-    this.docDbClusterEndpoint = cdk.Fn.importValue('SharedDocDbEndpoint');
+    this.docDbClusterEndpoint = cdk.Fn.importValue('DocDbClusterEndpoint');
     this.docDbSecurityGroup = ec2.SecurityGroup.fromSecurityGroupId(
       this, 
       'ImportedDocDbSecurityGroup', 

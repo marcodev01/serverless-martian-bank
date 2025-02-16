@@ -39,8 +39,9 @@ const TransactionScreen = () => {
     setSelectedAccount(e.target.value);
     e.preventDefault();
     try {
-      const data = new FormData();
-      data.append("account_number", e.target.value);
+      const data = {
+        account_number: e.target.value
+      };
       const res = await getTransactions(data).unwrap();
       console.log(res)
       dispatch(storeTransaction(res));
@@ -60,8 +61,9 @@ const TransactionScreen = () => {
   };
 
   const fetchAccounts = async () => {
-    const acc_data = new FormData();
-    acc_data.append("email_id", userInfo.email);
+    const acc_data = {
+      email_id: userInfo.email
+    };
     const res = await getAllAccounts(acc_data).unwrap();
     dispatch(getAccounts(res));
     setAllAccounts(res.response);

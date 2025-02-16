@@ -16,7 +16,7 @@ interface Coordinates {
 }
 
 interface ATM {
-  _id: { $oid: string };
+  _id: string ;
   name: string;
   coordinates: Coordinates;
   address: string;
@@ -63,7 +63,7 @@ describe('ATM Lambda Handler', () => {
   // Sample ATM data for testing
   const mockAtmData: ATM[] = [
     {
-      _id: { $oid: "123" },
+      _id:  "123" ,
       name: "ATM 1",
       coordinates: { lat: 1, lng: 1 },
       address: "Address 1",
@@ -74,7 +74,7 @@ describe('ATM Lambda Handler', () => {
       numberOfATMs: 2
     },
     {
-      _id: { $oid: "456" },
+      _id: "456" ,
       name: "ATM 2",
       coordinates: { lat: 2, lng: 2 },
       address: "Address 2",

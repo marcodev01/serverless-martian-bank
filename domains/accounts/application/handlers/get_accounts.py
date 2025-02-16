@@ -7,7 +7,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 def get_mongodb_client():
-    mongodb_uri = os.environ['MONGODB_URI']
+    mongodb_uri = os.environ['DB_URL']
     return MongoClient(mongodb_uri)
 
 def handler(event, context):

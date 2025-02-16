@@ -8,6 +8,7 @@ import * as targets from 'aws-cdk-lib/aws-events-targets';
 import { Construct } from 'constructs';
 import { ApiRoute, DomainStackProps } from '../types';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
+import { execSync } from 'child_process';
 
 
 /**
@@ -49,22 +50,36 @@ export class DomainPattern extends Construct {
     if (!props.lambdaLayers?.length) {
       return null;
     }
-
     const layers: { [key: string]: lambda.LayerVersion } = {};
-
-    /* Level 2 Construct with aws-lambda */
+    
     props.lambdaLayers.forEach((layerConfig, index) => {
       const layerId = `Layer${index}`;
       layers[layerId] = new lambda.LayerVersion(this, layerId, {
-        code: lambda.Code.fromAsset(layerConfig.layerPath),
         compatibleRuntimes: layerConfig.compatibleRuntimes,
-        description: layerConfig.description
+        description: layerConfig.description,
+        code: lambda.Code.fromAsset(layerConfig.layerPath, {
+          // Note: Automatically installs Python dependencies for the Lambda layer.
+          // Remove this bundling block if you are using a runtime other than Python.
+          bundling: {
+            local: {
+              tryBundle(outputDir: string) {
+                const packageDir = `${outputDir}/python/lib/python3.9/site-packages`;
+                execSync(`mkdir -p ${packageDir}`);
+                execSync(`pip install -r requirements.txt -t ${packageDir}`, {
+                  cwd: layerConfig.layerPath,
+                  stdio: 'inherit'
+                });
+                return true;
+              }
+            },
+            image: layerConfig.compatibleRuntimes[0].bundlingImage,
+            command: ['echo', 'local bundling failed']
+          }
+        }),
       });
     });
-
     return layers;
   }
-
   /**
    * Creates the Lambda functions based on the configuration provided in props.
    * @param props Configuration for the Lambda functions.
@@ -74,19 +89,6 @@ export class DomainPattern extends Construct {
     const handlers: { [key: string]: lambda.Function } = {};
 
     props.lambdaConfigs.forEach(config => {
-      const securityGroups = [];
-
-      // Attach security groups if a database configuration is provided
-      if (props.dbConfig) {
-        securityGroups.push(
-          /* Level 2 Construct with aws-ec2 */
-          ec2.SecurityGroup.fromSecurityGroupId(
-            this,
-            `${config.name}DbSecurityGroup`,
-            props.dbConfig.securityGroupId
-          )
-        );
-      }
 
       const environment: { [key: string]: string } = {
         ...config.environment
@@ -106,18 +108,12 @@ export class DomainPattern extends Construct {
         runtime: config.runtime || lambda.Runtime.PYTHON_3_9, // Default to Python 3.9 if runtime is not specified
         vpc: props.vpc,
         layers: this.lambdaLayers ? Object.values(this.lambdaLayers) : undefined,
-        securityGroups,
         handler: config.handler,
         code: lambda.Code.fromAsset(config.handlerPath),
         memorySize: config.memorySize,
         timeout: config.timeout,
         environment: environment
       });
-
-      // Grant DocumentDB access if the DB configuration exists
-      if (props.dbConfig) {
-        this.grantDocumentDbAccess(handler);
-      }
 
       handlers[config.name] = handler;
     });
@@ -177,27 +173,6 @@ export class DomainPattern extends Construct {
         });
       }
     });
-  }
-
-  /**
-   * Grants IAM permissions for DocumentDB access to a Lambda function.
-   * @param handler The Lambda function requiring DocumentDB access.
-   */
-  private grantDocumentDbAccess(handler: lambda.Function) {
-    const clusterArn = cdk.Arn.format({
-      service: 'docdb',
-      resource: 'db-cluster',
-      resourceName: 'SharedDocDbCluster',
-      region: cdk.Stack.of(this).region,
-      account: cdk.Stack.of(this).account,
-    }, cdk.Stack.of(this));
-
-    handler.addToRolePolicy(
-      new iam.PolicyStatement({
-        actions: ['docdb:connect'], // Allow connection to DocumentDB
-        resources: [clusterArn], // Restrict to the specific cluster
-      })
-    );
   }
 
    /**

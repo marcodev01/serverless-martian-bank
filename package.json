@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "aws-cdk-lib": "2.174.0",
+    "awscdk-resources-mongodbatlas": "^3.9.0",
     "constructs": "^10.0.0",
     "source-map-support": "^0.5.21"
   }

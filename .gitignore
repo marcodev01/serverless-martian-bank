@@ -5,7 +5,6 @@ node_modules
 .venv_martianbank
 show_structure.sh
 build
-lib/config/database.json
 __pycache__
 .pytest_cache
 

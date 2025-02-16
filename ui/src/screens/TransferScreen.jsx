@@ -102,14 +102,14 @@ const TransferScreen = () => {
     }
 
     try {
-      const data = new FormData();
-      data.append("sender_account_number", accNo);
-      data.append("receiver_account_number", receiverAccNo);
-      data.append("sender_account_type", accType);
-      data.append("receiver_account_type", receiverAcc);
-      data.append("reason", reason);
-      data.append("amount", transferAmount);
-
+      const data = {
+        sender_account_number: accNo,
+        receiver_account_number: receiverAccNo,
+        sender_account_type: accType,
+        receiver_account_type: receiverAcc,
+        reason: reason,
+        amount: transferAmount
+      };
       const res = await postTransfer(data).unwrap();
       console.log(res);
       dispatch(createTransfer({ ...res }));
@@ -156,12 +156,12 @@ const TransferScreen = () => {
     }
 
     try {
-      const data_external = new FormData();
-      data_external.append("sender_email", userInfo.email);
-      data_external.append("receiver_email", receiverEmail);
-      data_external.append("reason", reason);
-      data_external.append("amount", transferAmount);
-
+      const data_external = {
+        sender_email: userInfo.email,
+        receiver_email: receiverEmail,
+        reason: reason,
+        amount: transferAmount
+      };
       const res = await postTransferExternal(data_external).unwrap();
       console.log(res);
       if (res?.response?.approved === false) {
@@ -205,8 +205,9 @@ const TransferScreen = () => {
   };
 
   const fetchAccounts = async () => {
-    const data = new FormData();
-    data.append("email_id", userInfo.email);
+    const data = {
+      email_id: userInfo.email
+    };
     const res = await getAllAccounts(data).unwrap();
     dispatch(getAccounts(res));
   };

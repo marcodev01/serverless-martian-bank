@@ -1,6 +1,6 @@
 [
   {
-    "_id": { "$oid": "64a6f1cc8c1899820dbdf25a" },
+    "_id": "64a6f1cc8c1899820dbdf25a" ,
     "name": "Martian ATM (Highway)",
     "address": {
       "street": "14th Street, Martian Way",
@@ -23,7 +23,7 @@
     "interPlanetary": false
   },
   {
-    "_id": { "$oid": "64a6f2268c1899820dbdf25c" },
+    "_id": "64a6f2268c1899820dbdf25c",
     "name": "Martian ATM (Claytor Lake)",
     "address": {
       "street": "234, Highlander Road",
@@ -46,7 +46,7 @@
     "interPlanetary": false
   },
   {
-    "_id": { "$oid": "64a6f2d18c1899820dbdf25e" },
+    "_id": "64a6f2d18c1899820dbdf25e",
     "name": "Martian ATM (Musk Center)",
     "address": {
       "street": "17th Musk Rd",
@@ -69,7 +69,7 @@
     "interPlanetary": false
   },
   {
-    "_id": { "$oid": "64a6f3398c1899820dbdf260" },
+    "_id": "64a6f3398c1899820dbdf260",
     "name": "Martian ATM (Rocket Launchpad)",
     "address": {
       "street": "Martian Rocker Launcher",
@@ -92,7 +92,7 @@
     "interPlanetary": false
   },
   {
-    "_id": { "$oid": "64a6f3838c1899820dbdf262" },
+    "_id": "64a6f3838c1899820dbdf262",
     "name": "Martian ATM (Courthouse)",
     "address": {
       "street": "Mars Courthouse",
@@ -115,7 +115,7 @@
     "interPlanetary": false
   },
   {
-    "_id": { "$oid": "64a6f3b58c1899820dbdf264" },
+    "_id": "64a6f3b58c1899820dbdf264",
     "name": "Martian ATM (Theater)",
     "address": {
       "street": "23, National Theater",
@@ -138,7 +138,7 @@
     "interPlanetary": false
   },
   {
-    "_id": { "$oid": "64a6f40b8c1899820dbdf266" },
+    "_id":"64a6f40b8c1899820dbdf266",
     "name": "Martian ATM (Oak Hill)",
     "address": {
       "street": "Rover Road",
@@ -161,7 +161,7 @@
     "interPlanetary": false
   },
   {
-    "_id": { "$oid": "64a6f4498c1899820dbdf268" },
+    "_id": "64a6f4498c1899820dbdf268",
     "name": "Martian ATM (Beckley Main)",
     "address": {
       "street": "511 Naivelle Road",
@@ -184,7 +184,7 @@
     "interPlanetary": false
   },
   {
-    "_id": { "$oid": "64a6f4a58c1899820dbdf26a" },
+    "_id": "64a6f4a58c1899820dbdf26a",
     "name": "Martian ATM (The Exchange)",
     "address": {
       "street": "470, 16th Street",
@@ -207,7 +207,7 @@
     "interPlanetary": false
   },
   {
-    "_id": { "$oid": "64a6f4d28c1899820dbdf26c" },
+    "_id": "64a6f4d28c1899820dbdf26c",
     "name": "Martian ATM (The Flats)",
     "address": {
       "street": "471, 16th Street",
@@ -230,7 +230,7 @@
     "interPlanetary": false
   },
   {
-    "_id": { "$oid": "64ac747deaa5c8310cb21a1b" },
+    "_id": "64ac747deaa5c8310cb21a1b",
     "name": "Martian ATM (The Mark)",
     "address": {
       "street": "630, 14th Street",
@@ -253,7 +253,7 @@
     "interPlanetary": false
   },
   {
-    "_id": { "$oid": "64b072fd6981fda9e346bdde" },
+    "_id": "64b072fd6981fda9e346bdde",
     "name": "Earthern ATM (Georgia Tech)",
     "address": {
       "street": "470, 16th Street",
@@ -276,7 +276,7 @@
     "interPlanetary": true
   },
   {
-    "_id": { "$oid": "64b0735f6981fda9e346bde0" },
+    "_id": "64b0735f6981fda9e346bde0",
     "name": "Saturn ATM (Mimas Moon)",
     "address": {
       "street": "Outer ring",

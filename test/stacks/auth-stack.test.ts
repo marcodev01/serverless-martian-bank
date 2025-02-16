@@ -20,8 +20,6 @@ describe('AuthStack', () => {
         AllowAdminCreateUserOnly: false,
       },
       AutoVerifiedAttributes: ['email'],
-      EmailVerificationMessage: Match.anyValue(),
-      EmailVerificationSubject: Match.anyValue(),
       Policies: {
         PasswordPolicy: {
           MinimumLength: 8,
@@ -42,9 +40,10 @@ describe('AuthStack', () => {
           Required: true,
         }
       ]),
-      UsernameAttributes: ['email']
+      UsernameAttributes: ['email'],
+      VerificationMessageTemplate: Match.anyValue()
     });
-  });
+  });;
 
   test('creates User Pool Client with correct configuration', () => {
     template.hasResourceProperties('AWS::Cognito::UserPoolClient', {
@@ -61,14 +60,16 @@ describe('AuthStack', () => {
   });
 
   test('creates CloudFormation outputs', () => {
-    template.hasOutput('UserPoolId', {
+    template.hasOutput('UserPoolIdOutput', {
       Value: Match.anyValue()
     });
-    template.hasOutput('UserPoolClientId', {
+    template.hasOutput('UserPoolClientIdOutput', {
+      Value: Match.anyValue()
+    });
+    template.hasOutput('UserPoolDomainOutput', {
       Value: Match.anyValue()
     });
   });
-
   test('sets correct removal policy', () => {
     template.hasResource('AWS::Cognito::UserPool', {
       DeletionPolicy: 'Delete',

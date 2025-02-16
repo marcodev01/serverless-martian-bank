@@ -46,5 +46,9 @@ export class AtmStack extends cdk.Stack {
 
     // Expose the API Gateway as a public interface for the stack. 
     this.api = atmDomain.api;
+    new cdk.CfnOutput(this, 'AtmApiUrlOutput', {
+      value: atmDomain.api.url,
+      exportName: 'AtmApiUrl'
+    });    
   }
 }

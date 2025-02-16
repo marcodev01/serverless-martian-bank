@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib';
-import { DocumentDBStack } from '../lib/stacks/documentdb-stack';
 import { NetworkStack } from '../lib/stacks/network-stack';
 import { AccountsStack } from '../domains/accounts/infrastructure/accounts-stack';
 import { TransactionsStack } from '../domains/transactions/infrastructure/transactions-stack';
@@ -8,6 +7,7 @@ import { LoansStack } from '../domains/loans/infrastructure/loans-stack';
 import { UiStack } from '../ui/infrastructure/ui-stack';
 import { AtmStack } from '../domains/atm/infrastructure/atm-stack';
 import { AuthStack } from '../lib/stacks/auth-stack';
+import { MongoDBAtlasStack } from '../lib/stacks/documentdb-stack';
 
 
 /**
@@ -49,7 +49,7 @@ const authStack = new AuthStack(app, 'AuthStack', { env });
  * - DocumentDB cluster in private subnets
  * - Security group configuration
  */
-const documentDbStack = new DocumentDBStack(app, 'DocumentDBStack', { env, vpc: networkStack.vpc } );
+const documentDbStack = new MongoDBAtlasStack(app, 'DocumentDBStack', { env });
 
 /**
  * Domain Stacks
@@ -63,19 +63,22 @@ const documentDbStack = new DocumentDBStack(app, 'DocumentDBStack', { env, vpc: 
 const loansStack = new LoansStack(app, 'LoansStack', { 
   env, 
   vpc: networkStack.vpc, 
-  eventBus: networkStack.eventBus
+  eventBus: networkStack.eventBus,
+  databaseEndpoint: cdk.Fn.importValue('MongoDbAtlasConnectionString')
 });
 // transactions domain Stack
 const transactionsStack = new TransactionsStack(app, 'TransactionsStack', { 
   env, 
   vpc: networkStack.vpc, 
-  eventBus: networkStack.eventBus
+  eventBus: networkStack.eventBus,
+  databaseEndpoint: cdk.Fn.importValue('MongoDbAtlasConnectionString')
 });
 // Accounts domain Stack
 const accountsStack = new AccountsStack(app, 'AccountsStack', { 
   env, 
   vpc: networkStack.vpc, 
-  eventBus: networkStack.eventBus
+  eventBus: networkStack.eventBus,
+  databaseEndpoint: cdk.Fn.importValue('MongoDbAtlasConnectionString')
 });
 // ATM Locator Domain Stack
 // For simplicity, the ATM domain loads static ATM data from a JSON file, eliminating the need for database access.
@@ -95,15 +98,7 @@ const atmStack = new AtmStack(app, 'AtmStack', {
  * 
  *  Prerequisite: The React application must be built (e.g., using vite build), with the resulting artifacts placed in the ../build directory of the UI module.
  */
-const uiStack = new UiStack(app, 'UiStack', {
-  env,
-  accountsApiUrl: accountsStack.api.url,
-  transactionsApiUrl: transactionsStack.api.url,
-  loanApiUrl: loansStack.api.url,
-  atmApiUrl: atmStack.api.url, 
-  cognitoPoolId: authStack.userPool.userPoolId,
-  cognitoClientId: authStack.userPoolClient.userPoolClientId
-});
+const uiStack = new UiStack(app, 'UiStack', { env });
 
 
 /**  
@@ -112,22 +107,27 @@ const uiStack = new UiStack(app, 'UiStack', {
  * While the AWS CDK can infer dependencies based on resource references, explicitly defining them enhances clarity and control over deployment order. 
  * Note: CDK respects these dependencies during deployment to maintain consistency.
  */
-// DocumentDB stack depends on NetworkStack for VPC. 
-documentDbStack.addDependency(networkStack); 
+// Ensure DocumentDBStack is deployed after NetworkStack (VPC dependency)
+documentDbStack.addDependency(networkStack);
 
-[loansStack, transactionsStack, accountsStack].forEach(domainStack => {
-  // Each domain stack depends on NetworkStack for VPC and EventBus
-  domainStack.addDependency(networkStack);
-  // Each domain stack depends on DocumentDBStack for database access. 
-  // Note: This dependency is resolved through CloudFormation exports, promoting loose coupling between stacks.
-  domainStack.addDependency(documentDbStack);
-  // UI Stack depends on each domain stack to ensure APIs are ready.
-  uiStack.addDependency(domainStack);
-});
-// ATM Domain stack depends on NetworkStack only for VPC.
+// Ensure all domain stacks (Accounts, Transactions, Loans) are deployed after NetworkStack and DocumentDBStack
+accountsStack.addDependency(networkStack);
+accountsStack.addDependency(documentDbStack);
+
+transactionsStack.addDependency(networkStack);
+transactionsStack.addDependency(documentDbStack);
+
+loansStack.addDependency(networkStack);
+loansStack.addDependency(documentDbStack);
+
 atmStack.addDependency(networkStack);
-// UI Stack depends on Auth Stack for User Management with AWS Cognito BaaS
-uiStack.addDependency(authStack);
+
+// Ensure UI Stack is deployed last, after all APIs and authentication are ready
+uiStack.addDependency(authStack);      // Cognito (UserPool + Client)
+uiStack.addDependency(atmStack);       // ATM API
+uiStack.addDependency(accountsStack);  // Accounts API
+uiStack.addDependency(transactionsStack); // Transactions API
+uiStack.addDependency(loansStack);     // Loans API
 
 /**
  * Global tags for resource tagging

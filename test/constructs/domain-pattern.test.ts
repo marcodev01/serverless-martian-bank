@@ -142,8 +142,7 @@ describe('DomainPattern', () => {
       vpc,
       apiConfig: { name: 'test-api' },
       dbConfig: {
-        clusterEndpoint: 'test-cluster.endpoint',
-        securityGroupId: 'sg-12345'
+        clusterEndpoint: 'test-cluster.endpoint'
       },
       lambdaConfigs: [{
         name: 'TestFunction',
@@ -165,16 +164,6 @@ describe('DomainPattern', () => {
 
     // Assert
     const template = Template.fromStack(stack);
-    template.hasResourceProperties('AWS::IAM::Policy', {
-      PolicyDocument: {
-        Statement: Match.arrayWith([
-          Match.objectLike({
-            Action: 'docdb:connect',
-            Effect: 'Allow'
-          })
-        ])
-      }
-    });
 
     // Verify environment variables
     template.hasResourceProperties('AWS::Lambda::Function', {

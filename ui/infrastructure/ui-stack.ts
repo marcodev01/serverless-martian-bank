@@ -5,34 +5,25 @@ import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as path from 'path';
-import { env } from 'process';
-
-interface UiStackProps extends cdk.StackProps {
-  accountsApiUrl: string;
-  transactionsApiUrl: string;
-  loanApiUrl: string;
-  atmApiUrl: string;
-  cognitoPoolId: string;
-  cognitoClientId: string;
-}
 
 /**
  * The `UiStack` sets up the hosting infrastructure for the Martian Bank's frontend application.
  * 
  * This stack provisions an S3 bucket to host the static assets of the React singple page application. 
  * It integrates it with a CloudFront distribution for global content delivery, and ensures API URLs are dynamically injected into the deployed environment.
+ * 
+ * Note: When deploying a Single-Page Application (SPA) to S3, an additional deployment is required because environment variables (e.g., API Gateway URLs) must be available at synthesis time.
+ * This means that dynamically injecting these URLs during stack synthesis is not possible; they must be configured manually in the UI environment in a subsequent deployment.
+ * In contrast, services for hosting an UI like AWS Amplify support dynamic injection of environment variables.
  */
 export class UiStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props: UiStackProps) {
+  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
     // S3 Bucket to store static assets for the React application (using aws-s3 L2 construct)
     const websiteBucket = new s3.Bucket(this, 'WebsiteBucket', {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
-      // blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-      // accessControl: s3.BucketAccessControl.PRIVATE,
-      // enforceSSL: true
     });
 
     // CloudFront Distribution to serve the static assets globally (using aws-cloudfront L2 construct)
@@ -43,9 +34,6 @@ export class UiStack extends cdk.Stack {
       },
       defaultRootObject: 'index.html',
       errorResponses: [
-        // httpStatus: 404,
-        // responseHttpStatus: 200,
-        // responsePagePath: '/index.html'
         {
           httpStatus: 404,
           responseHttpStatus: 200,
@@ -65,16 +53,6 @@ export class UiStack extends cdk.Stack {
       sources: [
         // Deploy static build files from the build directory
         s3deploy.Source.asset(path.join(__dirname, '../build')),
-        // Dynamically generate the environment configuration file
-        s3deploy.Source.jsonData('env.js', {
-          VITE_ACCOUNTS_URL: `${props.accountsApiUrl}/account/`,
-          VITE_TRANSFER_URL: `${props.transactionsApiUrl}/transaction/`, 
-          VITE_LOAN_URL: `${props.loanApiUrl}/loan/`,
-          VITE_ATM_URL: props.atmApiUrl,
-          VITE_COGNITO_USER_POOL_ID: props.cognitoPoolId,
-          VITE_COGNITO_CLIENT_ID: props.cognitoClientId,
-          VITE_AWS_REGION: this.region
-        })
       ],
       destinationBucket: websiteBucket,
       distribution
