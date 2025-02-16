@@ -10,7 +10,7 @@ export class MongoDBAtlasStack extends cdk.Stack {
 
     const atlasProps = this.getContextProps();
 
-    // Erstelle die MongoDB Atlas-Ressourcen mit dem AWS CDK L3-Konstrukt
+    // Create the MongoDB Atlas resources using the AWS CDK L3 construct
     const atlasBasic = new AtlasBasic(this, 'AtlasBasic', {
       clusterProps: {
         name: atlasProps.clusterName,
@@ -23,7 +23,7 @@ export class MongoDBAtlasStack extends cdk.Stack {
                   instanceSize: 'M0',
                   nodeCount: 1,
                 },
-                regionName: atlasProps.region,
+                regionName: 'eu_central_1',
               },
             ],
           },
@@ -33,16 +33,15 @@ export class MongoDBAtlasStack extends cdk.Stack {
         orgId: atlasProps.orgId,
       },
       ipAccessListProps: {
-        accessList: [{ ipAddress: atlasProps.ip, comment: 'Allow all IPs by: 0.0.0.0/0' }],
+        accessList: [{ ipAddress: '0.0.0.0/0', comment: 'Allow all IPs' }],
       },
-      profile: atlasProps.profile,
+      profile: 'default',
     });
 
-    // Die Cluster-URL wird als CDK-Ausgabe generiert
-    const clusterUrl = `${atlasProps.clusterName}.mongodb.net`;
-    this.connectionString = `mongodb+srv://${atlasProps.clusterName}:${atlasProps.profile}@${clusterUrl}/?retryWrites=true&w=majority&appName=${atlasProps.clusterName}`;
+    // The cluster URL is generated as a CDK output
+    this.connectionString = `mongodb+srv://${atlasProps.username}:${atlasProps.password}@${atlasProps.clusterName}.${atlasProps.clusterid}.mongodb.net/?retryWrites=true&w=majority&appName=${atlasProps.appname}`;
 
-    // Exportiere den MongoDB Connection-String für einfache Nutzung
+    // Export the MongoDB connection string for easy usage
     new cdk.CfnOutput(this, 'MongoDbAtlasConnectionString', {
       value: this.connectionString,
       description: 'MongoDB Atlas Connection String',
@@ -56,24 +55,27 @@ export class MongoDBAtlasStack extends cdk.Stack {
       throw new Error('No database configuration found in context. Please specify via the cdk context.');
     }
 
-    const { orgId, profile, clusterName, region, ip } = database;
+    const { username, password, orgId, clusterName, clusterid, appname } = database;
 
+    if (!username) {
+      throw new Error('No context value specified for username. Please specify via the cdk context.');
+    }
+    if (!password) {
+      throw new Error('No context value specified for password. Please specify via the cdk context.');
+    }
     if (!orgId) {
       throw new Error('No context value specified for orgId. Please specify via the cdk context.');
-    }
-    if (!profile) {
-      throw new Error('No context value specified for profile. Please specify via the cdk context.');
     }
     if (!clusterName) {
       throw new Error('No context value specified for clusterName. Please specify via the cdk context.');
     }
-    if (!region) {
-      throw new Error('No context value specified for region. Please specify via the cdk context.');
+    if (!clusterid) {
+      throw new Error('No context value specified for clusterid. Please specify via the cdk context.');
     }
-    if (!ip) {
-      throw new Error('No context value specified for ip. Please specify via the cdk context.');
+    if (!appname) {
+      throw new Error('No context value specified for appname. Please specify via the cdk context.');
     }
 
-    return { orgId, profile, clusterName, region, ip };
+    return { username, password, orgId, clusterName, clusterid, appname };
   }
 }

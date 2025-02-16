@@ -34,13 +34,16 @@ describe('Stateful Stacks Snapshot Tests', () => {
   });
 
   test('DocumentDBStack snapshot', () => {
-    app = new cdk.App({
+    const app = new cdk.App({
       context: {
-        orgId: 'my-org-id',
-        profile: 'my-profile',
-        clusterName: 'my-cluster',
-        region: 'us-east-1',
-        ip: '0.0.0.0/0'
+        database: {
+          username: 'anyname',
+          password: 'pw',
+          orgId: 'my-org-id',
+          clusterName: 'my-cluster',
+          clusterid: 'cluster-id',
+          appname: 'app-name'
+        }
       }
     });
   

@@ -10,12 +10,14 @@ describe('MongoDBAtlasStack', () => {
   beforeEach(() => {
     app = new cdk.App();
     
-    // Setze die nötigen Kontextwerte
-    app.node.setContext('orgId', 'my-org-id');
-    app.node.setContext('profile', 'my-profile');
-    app.node.setContext('clusterName', 'my-cluster');
-    app.node.setContext('region', 'us-east-1');
-    app.node.setContext('ip', '0.0.0.0/0');
+    app.node.setContext('database', {
+      username: 'anyname',
+      password: 'pw',
+      orgId: 'my-org-id',
+      clusterName: 'my-cluster',
+      clusterid: 'cluster-id',
+      appname: 'app-name'
+    });
     
     stack = new MongoDBAtlasStack(app, 'TestMongoDBAtlasStack', {
       env: {
@@ -30,7 +32,7 @@ describe('MongoDBAtlasStack', () => {
   test('creates MongoDB Atlas connection string output', () => {
     template.hasOutput('MongoDbAtlasConnectionString', {
       Value: Match.stringLikeRegexp(
-        '^mongodb\\+srv://my-cluster:my-profile@my-cluster\\.mongodb\\.net/\\?retryWrites=true&w=majority&appName=my-cluster$'
+        '^mongodb\\+srv://anyname:pw@my-cluster\\.cluster-id\\.mongodb\\.net/\\?retryWrites=true&w=majority&appName=app-name$'
       )
     });
   });
