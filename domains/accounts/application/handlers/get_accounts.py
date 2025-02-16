@@ -47,13 +47,25 @@ def handler(event, context):
             
         return {
             'statusCode': 200,
-            'body': json.dumps(account_list)
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': '*',
+                'Access-Control-Allow-Methods': '*',
+                'Content-Type': 'application/json'
+            },   
+            'body': json.dumps({"response": account_list})
         }
         
     except Exception as e:
         logger.error(f"Error getting accounts: {str(e)}")
         return {
             'statusCode': 500,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': '*',
+                'Access-Control-Allow-Methods': '*',
+                'Content-Type': 'application/json'
+            },   
             'body': json.dumps({'error': str(e)})
         }
     finally:

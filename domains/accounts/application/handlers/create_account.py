@@ -60,19 +60,30 @@ def handler(event, context):
 
         return {
             'statusCode': 201,
-            'body': json.dumps({
-                'success': True,
-                'account_number': account['account_number']
-            })
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': '*',
+                'Access-Control-Allow-Methods': '*',
+                'Content-Type': 'application/json'
+            },   
+            'body': json.dumps({"response": True})
         }
 
     except Exception as e:
         logger.error(f"Error: {str(e)}")
         return {
             'statusCode': 500,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': '*',
+                'Access-Control-Allow-Methods': '*',
+                'Content-Type': 'application/json'
+            },   
             'body': json.dumps({
-                'success': False,
-                'error': str(e)
+                "response": {
+                    'success': False,
+                    'error': str(e)
+                }
             })
         }
     finally:

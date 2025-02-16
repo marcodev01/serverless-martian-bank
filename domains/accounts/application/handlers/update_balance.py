@@ -55,11 +55,21 @@ def handler(event, context):
                 logger.error(f"Failed to update balance for account {loan.account_number}")
                 return {'statusCode': 500}
 
-        return {'statusCode': 200}
+        return {
+            'statusCode': 200,
+            'headers': {
+                'Content-Type': 'application/json'
+            },   
+        }
 
     except Exception as e:
         logger.error(f"Error updating balance: {str(e)}")
-        return {'statusCode': 500}
+        return {
+            'statusCode': 500,
+            'headers': {
+                'Content-Type': 'application/json'
+            },   
+        }
     finally:
         if client:
             client.close()

@@ -35,7 +35,13 @@ def handler(event, context):
             }
             return {
                 'statusCode': 200,
-                'body': json.dumps(response)
+                'headers': {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': '*',
+                    'Access-Control-Allow-Methods': '*',
+                    'Content-Type': 'application/json'
+                },
+                'body': json.dumps({"response": response})
             }
         
         return {
@@ -47,6 +53,12 @@ def handler(event, context):
         logger.error(f"Error: {str(e)}")
         return {
             'statusCode': 500,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': '*',
+                'Access-Control-Allow-Methods': '*',
+                'Content-Type': 'application/json'
+            },            
             'body': json.dumps({'error': str(e)})
         }
     finally:

@@ -44,7 +44,7 @@ def handler(event, context):
             
         return {
             'statusCode': 200,
-            'body': json.dumps(transactions_list)
+            'body': json.dumps({"response": transactions_list})
         }
         
     except Exception as e:
