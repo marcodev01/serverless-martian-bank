@@ -22,10 +22,7 @@ def handler(event, context):
         amount = float(request_data["amount"])
         
         if amount <= 0:
-            return {
-                'statusCode': 400,
-                'body': json.dumps({"approved": False, "message": "Invalid amount"})
-            }
+            return error_response("Invalid amount", 400)
         
         # Connect to MongoDB
         client = get_mongodb_client()
@@ -33,38 +30,36 @@ def handler(event, context):
         collection_transactions = db["transactions"]
         collection_accounts = db["accounts"]
         
-        # Get accounts and validate
+        # Determine sender and receiver accounts using the e-mail
         sender_account = collection_accounts.find_one(
-            {"account_number": request_data["sender_account_number"]}
+            {"email": request_data["sender_email"]}
         )
         if not sender_account:
-            return {
-                'statusCode': 404,
-                'body': json.dumps({"approved": False, "message": "Sender Account Not Found"})
-            }
+            return error_response("Sender Account Not Found", 404)
         
         receiver_account = collection_accounts.find_one(
-            {"account_number": request_data["receiver_account_number"]}
+            {"email": request_data["receiver_email"]}
         )
         if not receiver_account:
-            return {
-                'statusCode': 404,
-                'body': json.dumps({"approved": False, "message": "Receiver Account Not Found"})
-            }
+            return error_response("Receiver Account Not Found", 404)
+        
+        # Get the account numbers from the accounts found
+        sender_account_number = sender_account.get("account_number")
+        receiver_account_number = receiver_account.get("account_number")
+        
+        if not sender_account_number or not receiver_account_number:
+            return error_response("Account number missing", 500)
         
         # Check sufficient balance
         if sender_account["balance"] < amount:
-            return {
-                'statusCode': 400,
-                'body': json.dumps({"approved": False, "message": "Insufficient Balance"})
-            }
+            return error_response("Insufficient Balance", 400)
             
-        # Record transaction first
+        # save the transaction in the DB (status: pending)
         transaction = {
-            "sender": sender_account["account_number"],
-            "receiver": receiver_account["account_number"],
+            "sender": sender_account_number,
+            "receiver": receiver_account_number,
             "amount": amount,
-            "reason": request_data.get("reason", "Transfer"),
+            "reason": request_data.get("reason", "Zelle Transfer"),
             "time_stamp": datetime.now(),
             "status": "pending"
         }
@@ -72,11 +67,12 @@ def handler(event, context):
         
         # Publish transaction event
         try:
+            # The event with the account numbers
             transaction_event = TransactionCompletedEvent(
-                from_account=sender_account["account_number"],
-                to_account=receiver_account["account_number"],
+                from_account=sender_account_number,
+                to_account=receiver_account_number,
                 amount=Decimal(str(amount)),
-                reason=request_data.get("reason", "Transfer")
+                reason=request_data.get("reason", "Zelle Transfer")
             )
             
             events_client = boto3.client('events')
@@ -99,10 +95,11 @@ def handler(event, context):
                 {"_id": transaction_result.inserted_id},
                 {"$set": {"status": "failed", "error": str(e)}}
             )
-            raise
+            raise e
         
         return {
             'statusCode': 200,
+            'headers': cors_headers(),
             'body': json.dumps({
                 "approved": True, 
                 "message": "Transaction is Successful",
@@ -114,8 +111,25 @@ def handler(event, context):
         logger.error(f"Error processing transaction: {str(e)}")
         return {
             'statusCode': 500,
+            'headers': cors_headers(),
             'body': json.dumps({'error': str(e)})
         }
     finally:
         if client:
             client.close()
+
+def error_response(message, status):
+    return {
+        'statusCode': status,
+        'headers': cors_headers(),
+        'body': json.dumps({"approved": False, "message": message})
+    }
+
+def cors_headers():
+    return {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': '*',
+        'Access-Control-Allow-Methods': '*',
+        'Content-Type': 'application/json'
+    }
+

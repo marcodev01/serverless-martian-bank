@@ -10,7 +10,7 @@ def get_mongodb_client():
     mongodb_uri = os.environ['DB_URL']
     return MongoClient(mongodb_uri)
 
-def handler(event, context):
+def handler(event, context):   
     client = None
     try:
         request_data = json.loads(event['body'])
@@ -44,6 +44,12 @@ def handler(event, context):
             
         return {
             'statusCode': 200,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': '*',
+                'Access-Control-Allow-Methods': '*',
+                'Content-Type': 'application/json'
+            },
             'body': json.dumps({"response": transactions_list})
         }
         
@@ -51,6 +57,12 @@ def handler(event, context):
         logger.error(f"Error getting transaction history: {str(e)}")
         return {
             'statusCode': 500,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': '*',
+                'Access-Control-Allow-Methods': '*',
+                'Content-Type': 'application/json'
+            },
             'body': json.dumps({'error': str(e)})
         }
     finally:

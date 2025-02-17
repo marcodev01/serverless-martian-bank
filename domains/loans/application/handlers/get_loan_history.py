@@ -47,7 +47,8 @@ def handler(event, context):
                 'Access-Control-Allow-Methods': '*',
                 'Content-Type': 'application/json'
             },
-            'body': json.dumps(loan_history)
+            'body': json.dumps({"response": loan_history})
+            
         }
         
     except Exception as e:

@@ -24,7 +24,7 @@ export class AccountsStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: AccountsStackProps) {
     super(scope, id, props);
 
-    const layersPath = path.resolve(__dirname, '../../../lib/layers/python');
+    const layersPath = path.resolve(__dirname, '../../../lib/layers');
     const handlerPath = path.resolve(__dirname, '../application/handlers');
 
     const accountsDomain = new DomainBuilder(this, { domainName: 'accounts'  })

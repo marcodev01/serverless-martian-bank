@@ -24,7 +24,7 @@ export class TransactionsStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: TransactionsStackProps) {
     super(scope, id, props);
 
-    const layersPath = path.resolve(__dirname, '../../../lib/layers/python');
+    const layersPath = path.resolve(__dirname, '../../../lib/layers');
     const handlerPath = path.resolve(__dirname, '../application/handlers');
 
     const transactionsDomain = new DomainBuilder(this, { domainName: 'transactions' })
@@ -38,24 +38,24 @@ export class TransactionsStack extends cdk.Stack {
         compatibleRuntimes: [lambda.Runtime.PYTHON_3_9],
         description: 'Shared utilities layer'
       })
-      .addLambda('SendMoneyFunction', {
-        handler: 'send_money.handler',
+      .addLambda('TransferMoneyFunction', {
+        handler: 'transfer_money.handler',
         handlerPath: handlerPath
       })
         .producesEvents()
-        .exposedVia('/transaction/send', 'POST')
+        .exposedVia('/transaction/transfer', 'POST')
         .and()
       .addLambda('GetTransactionHistoryFunction', {
         handler: 'get_transaction_history.handler',
         handlerPath: handlerPath
       })
-        .exposedVia('/transaction/history', 'GET')
+        .exposedVia('/transaction/history', 'POST')
         .and()
-      .addLambda('GetTransactionByIdFunction', {
-        handler: 'get_transaction_by_id.handler',
+      .addLambda('ZelleFunction', {
+        handler: 'zelle.handler',
         handlerPath: handlerPath
       })
-        .exposedVia('/transaction/details', 'GET')
+        .exposedVia('/transaction/zelle', 'POST')
         .and()
       .withApi({
         name: 'Transactions Service',

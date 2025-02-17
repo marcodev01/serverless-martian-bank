@@ -9,6 +9,7 @@ import { Construct } from 'constructs';
 import { ApiRoute, DomainStackProps } from '../types';
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import { execSync } from 'child_process';
+import { existsSync } from 'fs';
 
 
 /**
@@ -21,7 +22,7 @@ export class DomainPattern extends Construct {
   public readonly lambdaFunctions: { [key: string]: lambda.Function };
   private readonly lambdaLayers: { [key: string]: lambda.LayerVersion } | null;
   public readonly workflow?: sfn.StateMachine | null;
-  private readonly apiRoutes: ApiRoute[]; 
+  private readonly apiRoutes: ApiRoute[];
 
   constructor(scope: Construct, id: string, props: DomainStackProps) {
     super(scope, id);
@@ -51,35 +52,40 @@ export class DomainPattern extends Construct {
       return null;
     }
     const layers: { [key: string]: lambda.LayerVersion } = {};
-    
+
     props.lambdaLayers.forEach((layerConfig, index) => {
       const layerId = `Layer${index}`;
+
+      // Automatically installs Python dependencies for the Lambda layer.
+      const outputDir = `.build/layer${index}`;
+
+      const isPythonRuntime = layerConfig.compatibleRuntimes.some(runtime =>
+        runtime.name.toLowerCase().includes('python')
+      );
+
+      if (isPythonRuntime) {
+        const pythonDir = `${outputDir}/python`;
+
+        execSync(`mkdir -p ${pythonDir}`);
+
+        execSync(`cp -r ${layerConfig.layerPath}/python/* ${pythonDir}/`);
+
+        if (existsSync(`${layerConfig.layerPath}/requirements.txt`)) {
+          execSync(`pip install -r ${layerConfig.layerPath}/requirements.txt -t ${pythonDir} --upgrade`, {
+            stdio: 'inherit'
+          });
+        }
+      }
+
       layers[layerId] = new lambda.LayerVersion(this, layerId, {
         compatibleRuntimes: layerConfig.compatibleRuntimes,
         description: layerConfig.description,
-        code: lambda.Code.fromAsset(layerConfig.layerPath, {
-          // Note: Automatically installs Python dependencies for the Lambda layer.
-          // Remove this bundling block if you are using a runtime other than Python.
-          bundling: {
-            local: {
-              tryBundle(outputDir: string) {
-                const packageDir = `${outputDir}/python/lib/python3.9/site-packages`;
-                execSync(`mkdir -p ${packageDir}`);
-                execSync(`pip install -r requirements.txt -t ${packageDir}`, {
-                  cwd: layerConfig.layerPath,
-                  stdio: 'inherit'
-                });
-                return true;
-              }
-            },
-            image: layerConfig.compatibleRuntimes[0].bundlingImage,
-            command: ['echo', 'local bundling failed']
-          }
-        }),
+        code: lambda.Code.fromAsset(outputDir)
       });
     });
     return layers;
   }
+
   /**
    * Creates the Lambda functions based on the configuration provided in props.
    * @param props Configuration for the Lambda functions.
@@ -121,23 +127,23 @@ export class DomainPattern extends Construct {
     return handlers;
   }
 
-    /**
-   * Creates the API Gateway for handling HTTP requests.
-   * @param props API configuration.
-   * @returns The created API Gateway instance.
-   */
+  /**
+ * Creates the API Gateway for handling HTTP requests.
+ * @param props API configuration.
+ * @returns The created API Gateway instance.
+ */
   private createApiGateway(props: DomainStackProps): apigateway.RestApi {
     /* Level 2 Construct with aws-apigateway */
     const api = new apigateway.RestApi(this, 'Api', {
-        restApiName: props.apiConfig?.name || `${props.domainName} Service`,
-        description: props.apiConfig?.description,
-        defaultCorsPreflightOptions: props.apiConfig?.cors ?
-            { allowOrigins: props.apiConfig.cors.allowOrigins, allowMethods: props.apiConfig.cors.allowMethods } :
-            { allowOrigins: apigateway.Cors.ALL_ORIGINS, allowMethods: apigateway.Cors.ALL_METHODS }
+      restApiName: props.apiConfig?.name || `${props.domainName} Service`,
+      description: props.apiConfig?.description,
+      defaultCorsPreflightOptions: props.apiConfig?.cors ?
+        { allowOrigins: props.apiConfig.cors.allowOrigins, allowMethods: props.apiConfig.cors.allowMethods } :
+        { allowOrigins: apigateway.Cors.ALL_ORIGINS, allowMethods: apigateway.Cors.ALL_METHODS }
     });
 
     return api;
-}
+  }
 
   /**
    * Configures event-driven architecture using EventBridge rules and Lambda functions.
@@ -175,71 +181,71 @@ export class DomainPattern extends Construct {
     });
   }
 
-   /**
-   * Configures API integrations by mapping API routes to either Lambda functions or Step Functions.
-   */
+  /**
+  * Configures API integrations by mapping API routes to either Lambda functions or Step Functions.
+  */
   private configureApiIntegrations(): void {
     if (!this.api) return;
 
     this.apiRoutes.forEach(route => {
-        const resource = this.api.root.resourceForPath(route.path);
-        
-        if (route.type === 'lambda') {
-            // Lambda integration
-            const lambda = this.lambdaFunctions[route.target];
-            if (!lambda) {
-                throw new Error(`Lambda function "${route.target}" not found`);
-            }
-            resource.addMethod(route.method, 
-                new apigateway.LambdaIntegration(lambda)
-            );
-        } else {
-            // Workflow integration
-            const workflow = this.workflow;
-            if (!workflow) return;
+      const resource = this.api.root.resourceForPath(route.path);
 
-            const apiRole = new iam.Role(this, `${route.target}ApiRole`, {
-                assumedBy: new iam.ServicePrincipal('apigateway.amazonaws.com'),
-                inlinePolicies: {
-                    'StepFunctionsExecute': new iam.PolicyDocument({
-                        statements: [
-                            new iam.PolicyStatement({
-                                actions: ['states:StartExecution'],
-                                resources: [workflow.stateMachineArn]
-                            })
-                        ]
-                    })
-                }
-            });
+      if (route.type === 'lambda') {
+        // Lambda integration
+        const lambda = this.lambdaFunctions[route.target];
+        if (!lambda) {
+          throw new Error(`Lambda function "${route.target}" not found`);
+        }
+        resource.addMethod(route.method,
+          new apigateway.LambdaIntegration(lambda)
+        );
+      } else {
+        // Workflow integration
+        const workflow = this.workflow;
+        if (!workflow) return;
 
-            const integration = new apigateway.AwsIntegration({
-                service: 'states',
-                action: 'StartExecution',
-                options: {
-                    credentialsRole: apiRole,
-                    requestTemplates: {
-                        'application/json': `{
+        const apiRole = new iam.Role(this, `${route.target}ApiRole`, {
+          assumedBy: new iam.ServicePrincipal('apigateway.amazonaws.com'),
+          inlinePolicies: {
+            'StepFunctionsExecute': new iam.PolicyDocument({
+              statements: [
+                new iam.PolicyStatement({
+                  actions: ['states:StartExecution'],
+                  resources: [workflow.stateMachineArn]
+                })
+              ]
+            })
+          }
+        });
+
+        const integration = new apigateway.AwsIntegration({
+          service: 'states',
+          action: 'StartExecution',
+          options: {
+            credentialsRole: apiRole,
+            requestTemplates: {
+              'application/json': `{
                             "input": "$util.escapeJavaScript($input.json('$'))",
                             "stateMachineArn": "${workflow.stateMachineArn}"
                         }`
-                    },
-                    integrationResponses: [{
-                        statusCode: '200',
-                        responseTemplates: {
-                            'application/json': `{
+            },
+            integrationResponses: [{
+              statusCode: '200',
+              responseTemplates: {
+                'application/json': `{
                                 "executionArn": "$util.parseJson($input.json('$')).executionArn",
                                 "startDate": "$util.parseJson($input.json('$')).startDate"
                             }`
-                        }
-                    }]
-                }
-            });
+              }
+            }]
+          }
+        });
 
-            resource.addMethod(route.method, integration, {
-                methodResponses: [{ statusCode: '200' }]
-            });
-        }
+        resource.addMethod(route.method, integration, {
+          methodResponses: [{ statusCode: '200' }]
+        });
+      }
     });
-}
+  }
 
 }

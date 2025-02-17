@@ -13,14 +13,14 @@ export const transferApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     postTransfer: builder.mutation({
       query: (data) => ({ 
-        url: `${transferUrl}`, 
+        url: `${transferUrl}transaction/transfer`, 
         method: "POST", 
         body: data 
       }),
     }),
     postTransferExternal: builder.mutation({
       query: (data) => ({
-        url: `${transferUrl}zelle/`,
+        url: `${transferUrl}transaction/zelle`,
         method: "POST",
         body: data,
       }),

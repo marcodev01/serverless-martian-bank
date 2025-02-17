@@ -13,7 +13,7 @@ export const transactionApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getTransactions: builder.mutation({
       query: (data) => ({ 
-        url: `${transferUrl}history`, 
+        url: `${transferUrl}transaction/history`, 
         method: "POST", 
         body: data 
       }),

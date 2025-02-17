@@ -24,7 +24,7 @@ export class LoansStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: LoansStackProps) {
     super(scope, id, props);
 
-    const layersPath = path.resolve(__dirname, '../../../lib/layers/python');
+    const layersPath = path.resolve(__dirname, '../../../lib/layers');
     const handlerPath = path.resolve(__dirname, '../application/handlers');
     /*
      * Note: By using an AWS Step Functions workflow, the separation of concerns principle is enforced,  
@@ -47,7 +47,7 @@ export class LoansStack extends cdk.Stack {
         description: 'Shared utilities layer'
       })
       .addLambda('GetLoanHistoryFunction', { handler: 'get_loan_history.handler', handlerPath: handlerPath })
-      .exposedVia('/loan/history', 'GET')
+      .exposedVia('/loan/history', 'POST')
       .and()
       .withWorkflow('LoanProcessingWorkflow')
       .addStep('GetAccountDetails', { handler: 'get_account_details.handler', handlerPath: accountsHandlerPath })
