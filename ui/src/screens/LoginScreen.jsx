@@ -11,6 +11,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useLoginMutation } from "../slices/usersApiSlice";
 import { setCredentials } from "../slices/authSlice";
 import { toast } from "react-toastify";
+import { fetchUserAttributes } from 'aws-amplify/auth';
 import Loader from "../components/Loader";
 import "../index.css";
 
@@ -36,8 +37,10 @@ const LoginScreen = () => {
     try {
       const res = await login({ email, password }).unwrap();
       if (res.isSignedIn) {
-        dispatch(setCredentials({ 
-          email: email,
+        const user = await fetchUserAttributes();
+        dispatch(setCredentials({
+          name: user.given_name, 
+          email: user.email,
         }));
         toast.success("Successfully logged in!", {
           className: "toast-container-custom",

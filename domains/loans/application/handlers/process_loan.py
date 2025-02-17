@@ -24,6 +24,12 @@ def handler(event, context):
         if loan_amount <= 0:
             return {
                 'statusCode': 400,
+                'headers': {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': '*',
+                    'Access-Control-Allow-Methods': '*',
+                    'Content-Type': 'application/json'
+                }, 
                 'body': json.dumps({"approved": False, "message": "Invalid loan amount"})
             }
 
@@ -32,6 +38,12 @@ def handler(event, context):
         if not account:
             return {
                 'statusCode': 404,
+                'headers': {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': '*',
+                    'Access-Control-Allow-Methods': '*',
+                    'Content-Type': 'application/json'
+                }, 
                 'body': json.dumps({"approved": False, "message": "Account details not found"})
             }
 
@@ -75,6 +87,12 @@ def handler(event, context):
         
         return {
             'statusCode': 200,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': '*',
+                'Access-Control-Allow-Methods': '*',
+                'Content-Type': 'application/json'
+            }, 
             'body': json.dumps({
                 "approved": True,
                 "message": "Loan Approved",
@@ -86,6 +104,12 @@ def handler(event, context):
         logger.error(f"Error processing loan: {str(e)}")
         return {
             'statusCode': 500,
+            'headers': {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': '*',
+                'Access-Control-Allow-Methods': '*',
+                'Content-Type': 'application/json'
+            }, 
             'body': json.dumps({'error': str(e)})
         }
     finally:

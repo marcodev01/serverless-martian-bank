@@ -1,5 +1,5 @@
 import { fetchBaseQuery, createApi } from "@reduxjs/toolkit/query/react";
-import { signIn, signUp, signOut, updateUserAttributes  } from 'aws-amplify/auth';
+import { signIn, signUp, signOut, updateUserAttributes } from 'aws-amplify/auth';
 
 
 export const apiSlice = createApi({
