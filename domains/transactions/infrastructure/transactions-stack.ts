@@ -56,6 +56,7 @@ export class TransactionsStack extends cdk.Stack {
         handlerPath: handlerPath
       })
         .exposedVia('/transaction/zelle', 'POST')
+        .producesEvents()
         .and()
       .withApi({
         name: 'Transactions Service',

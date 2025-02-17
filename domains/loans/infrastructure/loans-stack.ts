@@ -47,14 +47,14 @@ export class LoansStack extends cdk.Stack {
         description: 'Shared utilities layer'
       })
       .addLambda('GetLoanHistoryFunction', { handler: 'get_loan_history.handler', handlerPath: handlerPath })
-      .exposedVia('/loan/history', 'POST')
-      .and()
+        .exposedVia('/loan/history', 'POST')
+        .and()
       .withWorkflow('LoanProcessingWorkflow')
-      .addStep('GetAccountDetails', { handler: 'get_account_details.handler', handlerPath: accountsHandlerPath })
-      .addStep('ProcessLoan', { handler: 'process_loan.handler', handlerPath: handlerPath },
-        lambdaBuilder => lambdaBuilder.producesEvents()
-      )
-      .exposedVia('/loan/process', 'POST')
+        .addStep('GetAccountDetails', { handler: 'get_account_details.handler', handlerPath: accountsHandlerPath })
+        .addStep('ProcessLoan', { handler: 'process_loan.handler', handlerPath: handlerPath },
+          lambdaBuilder => lambdaBuilder.producesEvents()
+        )
+        .exposedVia('/loan/process', 'POST')
       .and()
       .withApi({
         name: 'Loans Service',

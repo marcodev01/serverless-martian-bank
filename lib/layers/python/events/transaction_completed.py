@@ -25,7 +25,7 @@ class TransactionCompletedEvent:
         
     @classmethod
     def from_eventbridge(cls, event: dict) -> 'TransactionCompletedEvent':
-        detail = json.loads(event['Detail'])
+        detail = event.get('detail') or event.get('Detail')
         return cls(
             from_account=detail['fromAccount'],
             to_account=detail['toAccount'],

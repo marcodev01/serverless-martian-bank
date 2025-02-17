@@ -21,7 +21,7 @@ class LoanGrantedEvent:
         
     @classmethod
     def from_eventbridge(cls, event: dict) -> 'LoanGrantedEvent':
-        detail = json.loads(event['Detail'])
+        detail = event.get('detail') or event.get('Detail')
         return cls(
             account_number=detail['accountNumber'],
             amount=Decimal(str(detail['amount']))
