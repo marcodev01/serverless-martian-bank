@@ -27,8 +27,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faAngleDown, faAngleUp } from "@fortawesome/free-solid-svg-icons";
 import "leaflet/dist/leaflet.css";
 import "../index.css";
-import mapIcon from "../assets/coin-side.png";
-import mapImg from "../assets/atm.png";
+import mapIcon from "/assets/coin-side.png";
+import mapImg from "/assets/atm.png";
 import ApiUrls from "../slices/apiUrls";
 
 const AtmScreen = () => {
@@ -206,7 +206,7 @@ const AtmScreen = () => {
                         >
                           <span style={{ marginRight: "7px" }}>
                             <img
-                              src="./src/assets/coin-front.png"
+                              src="/assets/coin-front.png"
                               alt="logo"
                               width="45"
                               height="45"

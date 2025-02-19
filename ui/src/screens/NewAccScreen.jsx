@@ -298,7 +298,7 @@ const NewAccScreen = () => {
             <Row>
               <Col md={12} style={{ padding: "7.5vh", paddingTop: "5vh" }}>
                 <img
-                  src="./src/assets/card.png"
+                  src="/assets/card.png"
                   // src="https://via.placeholder.com/400x400"
                   alt="card"
                   className="img-fluid"

@@ -82,7 +82,7 @@ const Header = () => {
           <LinkContainer to="/">
             <Navbar.Brand className="text-white text-uppercase">
               <img
-                src="./src/assets/coin-front.png"
+                src="/assets/coin-front.png"
                 // src="https://via.placeholder.com/45x45"
                 alt="logo"
                 width="70vw"

@@ -36,7 +36,7 @@ const FormContainer = ({ children, position }) => {
               <Row>
                 <Col md={12} className="p-5">
                   <img
-                    src="./src/assets/card.png"
+                    src="/assets/card.png"
                     alt="card"
                     className="img-fluid"
                   />
