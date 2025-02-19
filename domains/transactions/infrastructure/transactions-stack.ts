@@ -63,7 +63,8 @@ export class TransactionsStack extends cdk.Stack {
         description: 'API for transaction management',
         cors: { 
           allowOrigins: apigateway.Cors.ALL_ORIGINS, 
-          allowMethods: apigateway.Cors.ALL_METHODS 
+          allowMethods: apigateway.Cors.ALL_METHODS,
+          allowHeaders: apigateway.Cors.DEFAULT_HEADERS 
         }
       })
       .build(this, 'TransactionsDomain');

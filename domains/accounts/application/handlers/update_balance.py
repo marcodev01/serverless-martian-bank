@@ -19,7 +19,7 @@ def handler(event, context):
         db = client["bank"]
         collection = db["accounts"]
 
-        if event['source'] == TransactionCompletedEvent.SOURCE:
+        if event.get('source') == TransactionCompletedEvent.SOURCE:
             # Handle transaction event
             transaction = TransactionCompletedEvent.from_eventbridge(event)
             
@@ -42,7 +42,7 @@ def handler(event, context):
                 # TODO: Consider implementing compensation transaction
                 return {'statusCode': 500}
 
-        elif event['source'] == LoanGrantedEvent.SOURCE:
+        elif event.get('source') == LoanGrantedEvent.SOURCE:
             # Handle loan event
             loan = LoanGrantedEvent.from_eventbridge(event)
             
@@ -50,6 +50,19 @@ def handler(event, context):
             result = collection.update_one(
                 {"account_number": loan.account_number},
                 {"$inc": {"balance": float(loan.amount)}}
+            )
+            if result.modified_count == 0:
+                logger.error(f"Failed to update balance for account {loan.account_number}")
+                return {'statusCode': 500}
+            
+        elif event.get('approved') == True:
+            # Handle loan worflow
+            loan = event
+            
+            # Update account balance with loan amount
+            result = collection.update_one(
+                {"account_number": loan['account_number']},
+                {"$inc": {"balance": float(loan['amount'])}}
             )
             if result.modified_count == 0:
                 logger.error(f"Failed to update balance for account {loan.account_number}")

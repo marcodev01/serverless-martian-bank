@@ -35,7 +35,7 @@ def handler(event, context):
                 "loan_amount": loan["loan_amount"],
                 "interest_rate": loan["interest_rate"],
                 "time_period": loan["time_period"],
-                "status": loan["status"],
+                "status": f"approved: {loan['approved']}",
                 "timestamp": loan["timestamp"].isoformat()
             })
             

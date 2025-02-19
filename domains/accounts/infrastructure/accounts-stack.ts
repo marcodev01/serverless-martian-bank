@@ -66,7 +66,7 @@ export class AccountsStack extends cdk.Stack {
       .withApi({
         name: 'Accounts Service',
         description: 'API for account management',
-        cors: { allowOrigins: apigateway.Cors.ALL_ORIGINS, allowMethods: apigateway.Cors.ALL_METHODS }
+        cors: { allowOrigins: apigateway.Cors.ALL_ORIGINS, allowMethods: apigateway.Cors.ALL_METHODS, allowHeaders: apigateway.Cors.DEFAULT_HEADERS }
       }) 
       .build(this, 'AccountsDomain');
 

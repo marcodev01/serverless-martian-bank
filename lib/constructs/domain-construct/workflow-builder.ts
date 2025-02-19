@@ -18,7 +18,8 @@ export class WorkflowBuilder {
     private readonly domainBuilder: DomainBuilder;
     private steps: {
         name: string,
-        lambdaBuilder: LambdaBuilder
+        lambdaBuilder: LambdaBuilder,
+        inputPath?: string
     }[] = [];
 
     constructor(scope: Construct, id: string, domainBuilder: DomainBuilder) {
@@ -52,7 +53,7 @@ export class WorkflowBuilder {
      * @returns The current `WorkflowBuilder` instance for method chaining.
      * @throws Error if a step with the given name already exists.
      */
-    addStep(name: string, config: { handler: string, handlerPath: string }, configureBuilder?: (builder: LambdaBuilder) => LambdaBuilder): this {
+    addStep(name: string, config: { handler: string, handlerPath: string, inputPath?: string; }, configureBuilder?: (builder: LambdaBuilder) => LambdaBuilder): this {
         if (this.hasStep(name)) {
             throw new Error(`Step "${name}" already exists in workflow`);
         }
@@ -64,7 +65,8 @@ export class WorkflowBuilder {
 
         this.steps.push({
             name,
-            lambdaBuilder: lambdaBuilder
+            lambdaBuilder: lambdaBuilder,
+            inputPath: config.inputPath
         });
 
         return this;
@@ -117,21 +119,21 @@ export class WorkflowBuilder {
                     `${step.name}Ref`,
                     `${step.name}StepFunction`
                 ),
-                payloadResponseOnly: true
+                payloadResponseOnly: true,
+                ...(step.inputPath ? { inputPath: step.inputPath } : {})
             });
         });
     
         // Define the workflow execution sequence
-        const definition = sfn.Chain.start(workflowTasks[0]);
-        
+        let chain = sfn.Chain.start(workflowTasks[0]);
         // Chain the remaining steps sequentially
         for (let i = 1; i < workflowTasks.length; i++) {
-            definition.next(workflowTasks[i]);
+            chain = chain.next(workflowTasks[i]);
         }
     
         // Create the Step Functions state machine with the chain
         return new sfn.StateMachine(this.scope, `${this.id}StateMachine`, {
-            definitionBody: sfn.DefinitionBody.fromChainable(definition)
+            definitionBody: sfn.DefinitionBody.fromChainable(chain)
         });
     }
 }

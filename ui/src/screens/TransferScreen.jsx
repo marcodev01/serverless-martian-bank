@@ -113,6 +113,7 @@ const TransferScreen = () => {
       const res = await postTransfer(data).unwrap();
       console.log(res);
       dispatch(createTransfer({ ...res }));
+      setTimeout(() => navigate("/"), 2000);
       toast.success("Money transfered!", {
         className: "toast-container-custom",
         autoClose: 500,
@@ -124,7 +125,6 @@ const TransferScreen = () => {
         theme: "dark",
       });
       dispatch(deleteSelectedAccount());
-      navigate("/");
     } catch (err) {
       toast.error(err?.data?.message || err.error, {
         className: "toast-container-custom",

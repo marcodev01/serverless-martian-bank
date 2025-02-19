@@ -7,7 +7,7 @@ import { WorkflowBuilder } from './domain-construct/workflow-builder';
 export interface ApiConfig {
   name?: string;
   description?: string;
-  cors?: { allowOrigins: string[], allowMethods: string[] };
+  cors?: { allowOrigins: string[], allowMethods: string[], allowHeaders: string[] };
 }
 
 export interface DocumentDbConfig {

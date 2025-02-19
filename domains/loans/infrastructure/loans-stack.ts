@@ -50,16 +50,21 @@ export class LoansStack extends cdk.Stack {
         .exposedVia('/loan/history', 'POST')
         .and()
       .withWorkflow('LoanProcessingWorkflow')
-        .addStep('GetAccountDetails', { handler: 'get_account_details.handler', handlerPath: accountsHandlerPath })
-        .addStep('ProcessLoan', { handler: 'process_loan.handler', handlerPath: handlerPath },
-          lambdaBuilder => lambdaBuilder.producesEvents()
+        .addStep('GetAccountDetailsFunction', { handler: 'get_account_details.handler', handlerPath: accountsHandlerPath })
+        .addStep('ProcessLoanFunction', { handler: 'process_loan.handler', handlerPath: handlerPath, inputPath:'$.body.response' },
+          lambdaBuilder => lambdaBuilder.withTimeout(cdk.Duration.seconds(30))
         )
+        .addStep('UpdateBalanceFunction', { handler: 'update_balance.handler', handlerPath: accountsHandlerPath, inputPath:'$.body' })
         .exposedVia('/loan/process', 'POST')
       .and()
       .withApi({
         name: 'Loans Service',
         description: 'API for loan management',
-        cors: { allowOrigins: apigateway.Cors.ALL_ORIGINS, allowMethods: apigateway.Cors.ALL_METHODS }
+        cors: {
+          allowOrigins: apigateway.Cors.ALL_ORIGINS,
+          allowMethods: apigateway.Cors.ALL_METHODS,
+          allowHeaders: apigateway.Cors.DEFAULT_HEADERS
+        }
       })
       .build(this, 'LoansDomain');
 

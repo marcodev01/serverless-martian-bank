@@ -23,6 +23,7 @@ export class DomainPattern extends Construct {
   private readonly lambdaLayers: { [key: string]: lambda.LayerVersion } | null;
   public readonly workflow?: sfn.StateMachine | null;
   private readonly apiRoutes: ApiRoute[];
+  private corsSettings: { allowOrigins: string[], allowMethods: string[], allowHeaders: string[] };
 
   constructor(scope: Construct, id: string, props: DomainStackProps) {
     super(scope, id);
@@ -111,6 +112,7 @@ export class DomainPattern extends Construct {
 
       // Create the Lambda function with the specified configuration by the Level 2 Construct aws-lambda
       const handler = new lambda.Function(this, config.name, {
+        functionName: config.name,
         runtime: config.runtime || lambda.Runtime.PYTHON_3_9, // Default to Python 3.9 if runtime is not specified
         vpc: props.vpc,
         layers: this.lambdaLayers ? Object.values(this.lambdaLayers) : undefined,
@@ -133,13 +135,22 @@ export class DomainPattern extends Construct {
  * @returns The created API Gateway instance.
  */
   private createApiGateway(props: DomainStackProps): apigateway.RestApi {
+
+    this.corsSettings = {
+      allowOrigins: props.apiConfig?.cors?.allowOrigins || apigateway.Cors.ALL_ORIGINS,
+      allowMethods: props.apiConfig?.cors?.allowMethods || apigateway.Cors.ALL_METHODS,
+      allowHeaders: props.apiConfig?.cors?.allowHeaders || apigateway.Cors.DEFAULT_HEADERS
+  };
+
     /* Level 2 Construct with aws-apigateway */
     const api = new apigateway.RestApi(this, 'Api', {
       restApiName: props.apiConfig?.name || `${props.domainName} Service`,
       description: props.apiConfig?.description,
-      defaultCorsPreflightOptions: props.apiConfig?.cors ?
-        { allowOrigins: props.apiConfig.cors.allowOrigins, allowMethods: props.apiConfig.cors.allowMethods } :
-        { allowOrigins: apigateway.Cors.ALL_ORIGINS, allowMethods: apigateway.Cors.ALL_METHODS }
+      defaultCorsPreflightOptions: {
+        allowOrigins: this.corsSettings.allowOrigins,
+        allowMethods: this.corsSettings.allowMethods,
+        allowHeaders: this.corsSettings.allowHeaders
+      }
     });
 
     return api;
@@ -196,8 +207,34 @@ export class DomainPattern extends Construct {
         if (!lambda) {
           throw new Error(`Lambda function "${route.target}" not found`);
         }
-        resource.addMethod(route.method,
-          new apigateway.LambdaIntegration(lambda)
+
+        const integration = new apigateway.LambdaIntegration(lambda, {
+          proxy: true,
+          integrationResponses: [
+            {
+              statusCode: "200",
+              responseParameters: {
+                "method.response.header.Access-Control-Allow-Origin": `'${this.corsSettings.allowOrigins.join(",")}'`,
+                "method.response.header.Access-Control-Allow-Methods": `'${this.corsSettings.allowMethods.join(",")}'`,
+                "method.response.header.Access-Control-Allow-Headers": `'${this.corsSettings.allowHeaders.join(",")}'`
+              }
+            }
+          ]
+        });
+
+        resource.addMethod(route.method, integration,
+          {
+            methodResponses: [
+              {
+                statusCode: "200",
+                responseParameters: {
+                  "method.response.header.Access-Control-Allow-Origin": true,
+                  "method.response.header.Access-Control-Allow-Methods": true,
+                  "method.response.header.Access-Control-Allow-Headers": true
+                }
+              }
+            ]
+          }
         );
       } else {
         // Workflow integration
@@ -236,13 +273,25 @@ export class DomainPattern extends Construct {
                                 "executionArn": "$util.parseJson($input.json('$')).executionArn",
                                 "startDate": "$util.parseJson($input.json('$')).startDate"
                             }`
+              },
+              responseParameters: {
+                "method.response.header.Access-Control-Allow-Origin": `'${this.corsSettings.allowOrigins.join(",")}'`,
+                "method.response.header.Access-Control-Allow-Methods": `'${this.corsSettings.allowMethods.join(",")}'`,
+                "method.response.header.Access-Control-Allow-Headers": `'${this.corsSettings.allowHeaders.join(",")}'`
               }
             }]
           }
         });
 
         resource.addMethod(route.method, integration, {
-          methodResponses: [{ statusCode: '200' }]
+          methodResponses: [{
+            statusCode: '200',
+            responseParameters: {
+              "method.response.header.Access-Control-Allow-Origin": true,
+              "method.response.header.Access-Control-Allow-Methods": true,
+              "method.response.header.Access-Control-Allow-Headers": true
+            }
+          }]
         });
       }
     });

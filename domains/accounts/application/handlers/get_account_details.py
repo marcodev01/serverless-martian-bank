@@ -13,8 +13,12 @@ def get_mongodb_client():
 def handler(event, context):
     client = None
     try:
-        # Parse request body
-        request_data = json.loads(event['body'])
+        if 'httpMethod' in event or 'body' in event:
+            source = "APIGateway"
+            request_data = json.loads(event['body'])
+        else:
+            source = "StepFunction" 
+            request_data = event       
         
         # Connect to MongoDB
         client = get_mongodb_client()
@@ -25,7 +29,7 @@ def handler(event, context):
         account = collection.find_one({"account_number": request_data["account_number"]})
         
         if account:
-            response = {
+            db_response = {
                 'account_number': account["account_number"],
                 'name': account["name"],
                 'balance': account["balance"],
@@ -33,6 +37,12 @@ def handler(event, context):
                 'email_id': account["email_id"],
                 'account_type': account["account_type"],
             }
+            
+            if source == "StepFunction":
+                response = {**request_data, **db_response}
+            else:
+                response = db_response
+            
             return {
                 'statusCode': 200,
                 'headers': {
@@ -41,12 +51,12 @@ def handler(event, context):
                     'Access-Control-Allow-Methods': '*',
                     'Content-Type': 'application/json'
                 },
-                'body': json.dumps({"response": response})
+                'body': {'response': response}
             }
         
         return {
             'statusCode': 404,
-            'body': json.dumps({})
+            'body': {}
         }
 
     except Exception as e:
@@ -59,7 +69,7 @@ def handler(event, context):
                 'Access-Control-Allow-Methods': '*',
                 'Content-Type': 'application/json'
             },            
-            'body': json.dumps({'error': str(e)})
+            'body': {'error': str(e)}
         }
     finally:
         if client is not None:
