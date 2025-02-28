@@ -113,7 +113,7 @@ const TransferScreen = () => {
       const res = await postTransfer(data).unwrap();
       console.log(res);
       dispatch(createTransfer({ ...res }));
-      setTimeout(() => navigate("/"), 2000);
+      setTimeout(() => navigate("/"), 1000);
       toast.success("Money transfered!", {
         className: "toast-container-custom",
         autoClose: 500,

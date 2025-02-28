@@ -245,7 +245,7 @@ export class DomainPattern extends Construct {
             'StepFunctionsExecute': new iam.PolicyDocument({
               statements: [
                 new iam.PolicyStatement({
-                  actions: ['states:StartExecution'],
+                  actions: ['states:StartSyncExecution'],
                   resources: [workflow.stateMachineArn]
                 })
               ]
@@ -255,7 +255,7 @@ export class DomainPattern extends Construct {
 
         const integration = new apigateway.AwsIntegration({
           service: 'states',
-          action: 'StartExecution',
+          action: 'StartSyncExecution',
           options: {
             credentialsRole: apiRole,
             requestTemplates: {
@@ -267,10 +267,7 @@ export class DomainPattern extends Construct {
             integrationResponses: [{
               statusCode: '200',
               responseTemplates: {
-                'application/json': `{
-                                "executionArn": "$util.parseJson($input.json('$')).executionArn",
-                                "startDate": "$util.parseJson($input.json('$')).startDate"
-                            }`
+                'application/json': `$util.parseJson($input.json('$')).output`
               },
               responseParameters: {
                 "method.response.header.Access-Control-Allow-Origin": `'${this.corsSettings.allowOrigins.join(",")}'`,
@@ -296,73 +293,3 @@ export class DomainPattern extends Construct {
   }
 
 }
-
-/*
-Optimizations
-
-Verhindert unnötige Lambda-Aufrufe bei häufigen Requests:
-const api = new apigateway.RestApi(this, 'MyApi', {
-  deployOptions: {
-    cachingEnabled: true,
-    cacheTtl: cdk.Duration.seconds(60), // 60 Sekunden Cache-Zeit
-    cacheClusterEnabled: true,
-    cacheClusterSize: '1.6' // Größe des Caches (1.6 GB)
-  }
-});
-
-Verhindert Cold Starts bei selten aufgerufenen Funktionen:
-const myFunction = new lambda.Function(this, 'MyFunction', {
-  runtime: lambda.Runtime.NODEJS_18_X,
-  handler: 'index.handler',
-  code: lambda.Code.fromAsset('lambda'),
-  memorySize: 1024,
-  timeout: cdk.Duration.seconds(10),
-  provisionedConcurrentExecutions: 5, // Hält 5 Instanzen warm
-});
-
-Mehr Speicher bedeutet auch mehr CPU-Leistung (proportional):
-const myFunction = new lambda.Function(this, 'MyFunction', {
-  runtime: lambda.Runtime.NODEJS_18_X,
-  handler: 'index.handler',
-  code: lambda.Code.fromAsset('lambda'),
-  memorySize: 1024, // Standard ist 128MB → Erhöhen für mehr CPU-Power
-  timeout: cdk.Duration.seconds(10), // Verhindert lange Wartezeiten
-});
-
-const myFunction = new lambda.Function(this, 'MyFunction', {
-  runtime: lambda.Runtime.NODEJS_18_X,
-  handler: 'index.handler',
-  code: lambda.Code.fromAsset('lambda'),
-  memorySize: 1024,
-  timeout: cdk.Duration.seconds(10),
-  reservedConcurrentExecutions: 5 // Maximal 5 parallele Instanzen erlaubt
-});
-
-Falls dein Lambda durch zu viele API-Requests überlastet wird, kannst du eine Drosselung (Rate Limiting) auf API Gateway setzen:
-
-const api = new apigateway.RestApi(this, 'MyApi', {
-  deployOptions: {
-    throttlingRateLimit: 100, // Max. 100 Requests pro Sekunde
-    throttlingBurstLimit: 200, // Max. 200 gleichzeitige Requests
-  }
-});
-
-kalierung flexibel steuern mit "Auto Scaling"
-
-Falls du möchtest, dass Lambda dynamisch zwischen einer Minimal- und Maximalgrenze skaliert, kannst du eine Application Auto Scaling Policy definieren:
-
-const scalingTarget = new appscaling.ScalableTarget(this, 'LambdaScalingTarget', {
-  serviceNamespace: appscaling.ServiceNamespace.LAMBDA,
-  scalableDimension: 'lambda:function:ProvisionedConcurrency',
-  resourceId: `function:${myFunction.functionName}`,
-  minCapacity: 2,  // Mindestens 2 Instanzen immer warm halten
-  maxCapacity: 10, // Maximal 10 Instanzen parallel erlaubt
-});
-
-// Skalierung basierend auf einer Metrik (z. B. Invocations pro Sekunde)
-scalingTarget.scaleToTrackMetric('InvocationsScaling', {
-  targetValue: 100, // Zielt darauf ab, dass 100 Anfragen pro Instanz laufen
-  predefinedMetric: appscaling.PredefinedMetric.LAMBDA_PROVISIONED_CONCURRENCY_UTILIZATION
-});
-
-*/

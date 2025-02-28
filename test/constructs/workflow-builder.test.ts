@@ -29,7 +29,7 @@ describe('WorkflowBuilder', () => {
       timeout: cdk.Duration.seconds(10),
       environment: { TEST_VAR: 'test' }
     };
-    workflowBuilder.addStep('TestStep', lambdaConfig);
+    workflowBuilder.withStep('TestStep', lambdaConfig);
     workflowBuilder.build();
 
     template = Template.fromStack(stack);
@@ -43,7 +43,7 @@ describe('WorkflowBuilder', () => {
       handlerPath: 'lambda/test',
       runtime: lambda.Runtime.NODEJS_18_X
     };
-    workflowBuilder.addStep('TestStep', lambdaConfig);
+    workflowBuilder.withStep('TestStep', lambdaConfig);
     workflowBuilder.build(); 
 
     template = Template.fromStack(stack);
@@ -71,7 +71,7 @@ describe('WorkflowBuilder', () => {
       environment: { TEST_VAR: 'test' }
     };
 
-    workflowBuilder.addStep('TestStep', lambdaConfig);
+    workflowBuilder.withStep('TestStep', lambdaConfig);
 
     expect((workflowBuilder as any).steps).toHaveLength(1);
     expect((workflowBuilder as any).steps[0].name).toBe('TestStep');
@@ -84,7 +84,7 @@ describe('WorkflowBuilder', () => {
       handlerPath: 'lambda/test',
       runtime: lambda.Runtime.NODEJS_18_X
     };
-    workflowBuilder.addStep('TestStep', lambdaConfig);
+    workflowBuilder.withStep('TestStep', lambdaConfig);
     workflowBuilder.build();
 
     template = Template.fromStack(stack);

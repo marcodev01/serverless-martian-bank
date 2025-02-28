@@ -95,7 +95,7 @@ export class DomainBuilder {
    * @param config Configuration object for the Lambda layer.
    * @returns The current `DomainBuilder` instance.
    */
-  public addLambdaLayer(config: LambdaLayerConfig): this {
+  public withLambdaLayer(config: LambdaLayerConfig): this {
     this.lambdaLayers.push(config);
     return this;
   }
@@ -107,7 +107,7 @@ export class DomainBuilder {
    * @param config Configuration for the Lambda handler.
    * @returns A `LambdaBuilder` instance for further customization of the Lambda function.
    */
-  public addLambda(name: string, config: { handler: string, handlerPath: string } ): LambdaBuilder {
+  public withLambda(name: string, config: { handler: string, handlerPath: string } ): LambdaBuilder {
     const lambdaConfig: LambdaConfig = {
       name,
       handler: config.handler,

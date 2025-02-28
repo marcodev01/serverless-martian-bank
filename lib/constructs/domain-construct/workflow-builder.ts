@@ -1,6 +1,7 @@
 import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { DomainBuilder } from './domain-builder';
 import { LambdaBuilder } from './lambda-builder';
@@ -53,14 +54,14 @@ export class WorkflowBuilder {
      * @returns The current `WorkflowBuilder` instance for method chaining.
      * @throws Error if a step with the given name already exists.
      */
-    addStep(name: string, config: { handler: string, handlerPath: string, inputPath?: string; }, configureBuilder?: (builder: LambdaBuilder) => LambdaBuilder): this {
+    withStep(name: string, config: { handler: string, handlerPath: string, inputPath?: string; }, configureBuilder?: (builder: LambdaBuilder) => LambdaBuilder): this {
         if (this.hasStep(name)) {
             throw new Error(`Step "${name}" already exists in workflow`);
         }
 
         const lambdaName = `${name}StepFunction`;
        
-        const baseBuilder = this.domainBuilder.addLambda(lambdaName, { handler: config.handler, handlerPath: config.handlerPath });
+        const baseBuilder = this.domainBuilder.withLambda(lambdaName, { handler: config.handler, handlerPath: config.handlerPath });
         const lambdaBuilder = configureBuilder ? configureBuilder(baseBuilder) : baseBuilder;
 
         this.steps.push({
@@ -133,7 +134,9 @@ export class WorkflowBuilder {
     
         // Create the Step Functions state machine with the chain
         return new sfn.StateMachine(this.scope, `${this.id}StateMachine`, {
-            definitionBody: sfn.DefinitionBody.fromChainable(chain)
+            definitionBody: sfn.DefinitionBody.fromChainable(chain),
+            stateMachineType: sfn.StateMachineType.EXPRESS,
+            timeout: cdk.Duration.minutes(5)
         });
     }
 }

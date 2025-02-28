@@ -1,32 +1,11 @@
+import '../stacks/domains/__mocks__/lambda-mock';
+
 import { Stack } from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { DomainPattern } from '../../lib/constructs/domain-construct/domain-pattern';
 import { DomainStackProps, LambdaLayerConfig } from '../../lib/constructs/types';
-
-// Mock both Lambda function and layer asset creation
-jest.mock('aws-cdk-lib/aws-lambda', () => {
-  const actual = jest.requireActual('aws-cdk-lib/aws-lambda');
-  return {
-    ...actual,
-    Code: {
-      ...actual.Code,
-      fromAsset: jest.fn().mockImplementation((path) => {
-        return actual.Code.fromInline('exports.handler = async () => { return { statusCode: 200 }; }');
-      })
-    },
-    LayerVersion: jest.fn().mockImplementation((scope: any, id: string, props: any) => {
-      return {
-        layerVersionArn: 'arn:aws:lambda:region:account:layer:name:version',
-        addPermission: jest.fn(),
-        node: {
-          addDependency: jest.fn()
-        }
-      };
-    })
-  };
-});
 
 describe('DomainPattern', () => {
   let stack: Stack;
@@ -94,12 +73,15 @@ describe('DomainPattern', () => {
 
   test('configures lambda layers correctly', () => {
     // Arrange
+    const execSyncMock = jest.spyOn(require('child_process'), 'execSync').mockImplementation(() => '');
+    const existsSyncMock = jest.spyOn(require('fs'), 'existsSync').mockReturnValue(false);
+    
     const lambdaLayers: LambdaLayerConfig[] = [{
       layerPath: 'dummy-layer-path',
       compatibleRuntimes: [lambda.Runtime.PYTHON_3_9],
       description: 'Test Layer'
     }];
-
+  
     const props: DomainStackProps = {
       domainName: 'test-domain',
       vpc,
@@ -118,10 +100,10 @@ describe('DomainPattern', () => {
         type: 'lambda'
       }]
     };
-
+  
     // Act
     new DomainPattern(stack, 'TestDomain', props);
-
+  
     // Assert
     // Verify that LayerVersion was called with correct parameters
     expect(lambda.LayerVersion).toHaveBeenCalledWith(
@@ -132,6 +114,10 @@ describe('DomainPattern', () => {
         compatibleRuntimes: [lambda.Runtime.PYTHON_3_9]
       })
     );
+    
+    // Cleanup mocks
+    execSyncMock.mockRestore();
+    existsSyncMock.mockRestore();
   });
 
   // Additional test for DocumentDB configuration

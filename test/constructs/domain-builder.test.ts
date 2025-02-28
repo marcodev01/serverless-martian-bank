@@ -1,23 +1,11 @@
+import '../stacks/domains/__mocks__/lambda-mock';
+
 import { Stack } from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { DomainBuilder } from '../../lib/constructs/domain-construct/domain-builder';
-
-// Mock the Lambda asset creation
-jest.mock('aws-cdk-lib/aws-lambda', () => {
-  const actual = jest.requireActual('aws-cdk-lib/aws-lambda');
-  return {
-    ...actual,
-    Code: {
-      ...actual.Code,
-      fromAsset: jest.fn().mockImplementation((path) => {
-        return actual.Code.fromInline('exports.handler = async () => { return { statusCode: 200 }; }');
-      })
-    }
-  };
-});
 
 describe('DomainBuilder', () => {
   let stack: Stack;
@@ -36,7 +24,7 @@ describe('DomainBuilder', () => {
       .withVpc(vpc)
       .withApi({ name: 'test-api' });
 
-    builder.addLambda('TestFunction', {
+    builder.withLambda('TestFunction', {
       handler: 'index.handler',
       handlerPath: 'dummy-path' // This path will be mocked
     }).exposedVia('/test', 'GET');
@@ -89,7 +77,7 @@ describe('DomainBuilder', () => {
       .withApi({ name: 'test-api' })
       .withEventBus(eventBus);
 
-    builder.addLambda('TestProducer', {
+    builder.withLambda('TestProducer', {
       handler: 'index.handler',
       handlerPath: 'dummy-path'
     })

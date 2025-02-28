@@ -107,22 +107,30 @@ describe('TransactionsStack', () => {
   });
 
   describe('Event Configuration', () => {
-    test('SendMoneyFunction is configured as event producer', () => {
+    test('TransferMoneyFunction and ZelleFunction are configured as event producers', () => {
       const functions = template.findResources('AWS::Lambda::Function');
-      const sendMoneyFunction = Object.values(functions).find(func => 
-        func.Properties.Handler.includes('send_money')
-      );
       
-      expect(sendMoneyFunction?.Properties.Environment.Variables.EVENT_BUS_NAME).toBeDefined();
-      expect(sendMoneyFunction?.Properties.Environment.Variables.EVENT_SOURCE).toBe('martian-bank.transactions');
+      // Check TransferMoneyFunction
+      const transferMoneyFunction = Object.values(functions).find(func => 
+        func.Properties.Handler.includes('transfer_money')
+      );
+      expect(transferMoneyFunction?.Properties.Environment.Variables.EVENT_BUS_NAME).toBeDefined();
+      expect(transferMoneyFunction?.Properties.Environment.Variables.EVENT_SOURCE).toBe('martian-bank.transactions');
+      
+      // Check ZelleFunction
+      const zelleFunction = Object.values(functions).find(func => 
+        func.Properties.Handler.includes('zelle')
+      );
+      expect(zelleFunction?.Properties.Environment.Variables.EVENT_BUS_NAME).toBeDefined();
+      expect(zelleFunction?.Properties.Environment.Variables.EVENT_SOURCE).toBe('martian-bank.transactions');
     });
-
-    test('other functions do not have event producer permissions', () => {
+  
+    test('GetTransactionHistoryFunction does not have event producer permissions', () => {
       const policies = template.findResources('AWS::IAM::Policy');
       
-      // Search all policies except the SendMoneyFunction policy
+      // Find policies related to GetTransactionHistoryFunction
       Object.entries(policies).forEach(([key, policy]) => {
-        if (!key.includes('SendMoney')) {
+        if (key.includes('GetTransactionHistory')) {
           const statements = policy.Properties.PolicyDocument.Statement;
           const hasEventPermission = statements.some((stmt: any) => 
             stmt.Action === 'events:PutEvents'
@@ -144,7 +152,7 @@ describe('TransactionsStack', () => {
     test('creates correct API routes with proper integrations', () => {
       // Check resources
       template.hasResourceProperties('AWS::ApiGateway::Resource', {
-        PathPart: 'send'
+        PathPart: 'transfer'
       });
 
       template.hasResourceProperties('AWS::ApiGateway::Resource', {
@@ -152,20 +160,12 @@ describe('TransactionsStack', () => {
       });
 
       template.hasResourceProperties('AWS::ApiGateway::Resource', {
-        PathPart: 'details'
+        PathPart: 'zelle'
       });
 
       // Check HTTP methods
       template.hasResourceProperties('AWS::ApiGateway::Method', {
         HttpMethod: 'POST',
-        Integration: {
-          Type: 'AWS_PROXY',
-          IntegrationHttpMethod: 'POST'
-        }
-      });
-
-      template.hasResourceProperties('AWS::ApiGateway::Method', {
-        HttpMethod: 'GET',
         Integration: {
           Type: 'AWS_PROXY',
           IntegrationHttpMethod: 'POST'
@@ -178,9 +178,9 @@ describe('TransactionsStack', () => {
     test('creates all required Lambda functions with correct configuration', () => {
       template.resourceCountIs('AWS::Lambda::Function', 3);
 
-      // SendMoney Function
+      // TransferMoneyFunction
       template.hasResourceProperties('AWS::Lambda::Function', {
-        Handler: Match.stringLikeRegexp('send_money'),
+        Handler: Match.stringLikeRegexp('transfer_money'),
         Runtime: lambda.Runtime.PYTHON_3_9.name,
         Environment: {
           Variables: Match.objectLike({
@@ -191,7 +191,7 @@ describe('TransactionsStack', () => {
         }
       });
 
-      // GetTransactionHistory Function
+      // GetTransactionHistoryFunction
       template.hasResourceProperties('AWS::Lambda::Function', {
         Handler: Match.stringLikeRegexp('get_transaction_history'),
         Runtime: lambda.Runtime.PYTHON_3_9.name,
@@ -202,12 +202,14 @@ describe('TransactionsStack', () => {
         }
       });
 
-      // GetTransactionById Function
+      // ZelleFunction
       template.hasResourceProperties('AWS::Lambda::Function', {
-        Handler: Match.stringLikeRegexp('get_transaction_by_id'),
+        Handler: Match.stringLikeRegexp('zelle'),
         Runtime: lambda.Runtime.PYTHON_3_9.name,
         Environment: {
           Variables: Match.objectLike({
+            EVENT_BUS_NAME: Match.anyValue(),
+            EVENT_SOURCE: 'martian-bank.transactions',
             DB_URL: Match.anyValue()
           })
         }

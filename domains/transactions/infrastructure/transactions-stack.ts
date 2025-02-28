@@ -33,30 +33,30 @@ export class TransactionsStack extends cdk.Stack {
         clusterEndpoint: props.databaseEndpoint,
       })
       .withEventBus(props.eventBus)
-      .addLambdaLayer({
+      .withLambdaLayer({
         layerPath: layersPath,
         compatibleRuntimes: [lambda.Runtime.PYTHON_3_9],
         description: 'Shared utilities layer'
       })
-      .addLambda('TransferMoneyFunction', {
+      .withLambda('TransferMoneyFunction', {
         handler: 'transfer_money.handler',
         handlerPath: handlerPath
       })
         .producesEvents()
         .exposedVia('/transaction/transfer', 'POST')
         .and()
-      .addLambda('GetTransactionHistoryFunction', {
+      .withLambda('GetTransactionHistoryFunction', {
         handler: 'get_transaction_history.handler',
         handlerPath: handlerPath
       })
         .exposedVia('/transaction/history', 'POST')
         .and()
-      .addLambda('ZelleFunction', {
+      .withLambda('ZelleFunction', {
         handler: 'zelle.handler',
         handlerPath: handlerPath
       })
-        .exposedVia('/transaction/zelle', 'POST')
         .producesEvents()
+        .exposedVia('/transaction/zelle', 'POST')
         .and()
       .withApi({
         name: 'Transactions Service',

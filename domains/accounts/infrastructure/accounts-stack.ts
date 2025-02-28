@@ -14,9 +14,11 @@ interface AccountsStackProps extends cdk.StackProps {
 }
 
 /**
- * The `AccountsStack` represents the accounts domain of the Martian Bank application, following DDD principles by organizing each domain in its own stack.
+ * The `AccountsStack` represents the accounts domain of the Martian Bank application, 
+ * following DDD principles by organizing each domain in its own stack.
  *  
- * It is part of the Architecture as Code (AaC) paradigm, using a fluent API to explicitly model the serverless architecture for this domain.
+ * It is part of the Architecture as Code (AaC) paradigm, 
+ * using a fluent API to explicitly model the serverless architecture for this domain.
  */
 export class AccountsStack extends cdk.Stack {
   public readonly api: apigateway.RestApi;
@@ -33,40 +35,44 @@ export class AccountsStack extends cdk.Stack {
         clusterEndpoint: props.databaseEndpoint,
       })
       .withEventBus(props.eventBus) 
-      .addLambdaLayer({
+      .withLambdaLayer({
         layerPath: layersPath,
         compatibleRuntimes: [lambda.Runtime.PYTHON_3_9],
         description: 'Shared utilities layer'
       })
-      .addLambda('GetAccountDetailsFunction', {
+      .withLambda('GetAccountDetailsFunction', {
         handler: 'get_account_details.handler',
         handlerPath: handlerPath
       })
         .exposedVia('/account/detail', 'POST')
         .and()
-      .addLambda('GetAllAccountsFunction', {
+      .withLambda('GetAllAccountsFunction', {
         handler: 'get_accounts.handler',
         handlerPath: handlerPath
       })
         .exposedVia('/account/allaccounts', 'POST')
         .and()
-      .addLambda('CreateAccountFunction', {
+      .withLambda('CreateAccountFunction', {
         handler: 'create_account.handler',
         handlerPath: handlerPath
       })
         .exposedVia('/account/create', 'POST')
         .and()
-      .addLambda('UpdateBalanceFunction', {
+      .withLambda('UpdateBalanceFunction', {
         handler: 'update_balance.handler',
         handlerPath: handlerPath
       })
-        .consumesEvent('martian-bank.loans', 'loan.granted')
         .consumesEvent('martian-bank.transactions', 'transaction.completed')
+        .withMemory(512)
         .and()
       .withApi({
         name: 'Accounts Service',
         description: 'API for account management',
-        cors: { allowOrigins: apigateway.Cors.ALL_ORIGINS, allowMethods: apigateway.Cors.ALL_METHODS, allowHeaders: apigateway.Cors.DEFAULT_HEADERS }
+        cors: { 
+          allowOrigins: apigateway.Cors.ALL_ORIGINS, 
+          allowMethods: apigateway.Cors.ALL_METHODS, 
+          allowHeaders: apigateway.Cors.DEFAULT_HEADERS 
+        }
       }) 
       .build(this, 'AccountsDomain');
 

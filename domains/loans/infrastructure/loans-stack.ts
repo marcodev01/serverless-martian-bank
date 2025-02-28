@@ -41,20 +41,22 @@ export class LoansStack extends cdk.Stack {
         clusterEndpoint: props.databaseEndpoint
       })
       .withEventBus(props.eventBus)
-      .addLambdaLayer({
+      .withLambdaLayer({
         layerPath: layersPath,
         compatibleRuntimes: [lambda.Runtime.PYTHON_3_9],
         description: 'Shared utilities layer'
       })
-      .addLambda('GetLoanHistoryFunction', { handler: 'get_loan_history.handler', handlerPath: handlerPath })
+      .withLambda('GetLoanHistoryFunction', { handler: 'get_loan_history.handler', handlerPath: handlerPath })
         .exposedVia('/loan/history', 'POST')
         .and()
       .withWorkflow('LoanProcessingWorkflow')
-        .addStep('GetAccountDetailsFunction', { handler: 'get_account_details.handler', handlerPath: accountsHandlerPath })
-        .addStep('ProcessLoanFunction', { handler: 'process_loan.handler', handlerPath: handlerPath, inputPath:'$.body.response' },
+        .withStep('GetAccountDetailsFunction', { handler: 'get_account_details.handler', handlerPath: accountsHandlerPath })
+        .withStep('ProcessLoanFunction', { handler: 'process_loan.handler', handlerPath: handlerPath, inputPath:'$.body.response' },
           lambdaBuilder => lambdaBuilder.withTimeout(cdk.Duration.seconds(30))
         )
-        .addStep('UpdateBalanceFunction', { handler: 'update_balance.handler', handlerPath: accountsHandlerPath, inputPath:'$.body' })
+        .withStep('UpdateBalanceFunction', { handler: 'update_balance.handler', handlerPath: accountsHandlerPath, inputPath:'$.body' },
+          lambdaBuilder => lambdaBuilder.withMemory(512)
+        )
         .exposedVia('/loan/process', 'POST')
       .and()
       .withApi({

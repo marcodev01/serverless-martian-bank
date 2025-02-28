@@ -102,7 +102,6 @@ describe('AccountsStack', () => {
   describe('Event Configuration', () => {
     test('UpdateBalanceFunction is configured as event consumer', () => {
       const expectedEvents = [
-        { source: 'martian-bank.loans', detailType: 'loan.granted' },
         { source: 'martian-bank.transactions', detailType: 'transaction.completed' }
       ];
 
@@ -142,7 +141,7 @@ describe('AccountsStack', () => {
     test('other functions are not event consumers', () => {
       const rules = template.findResources('AWS::Events::Rule', {});
       const ruleCount = Object.keys(rules).length;
-      expect(ruleCount).toBe(2);
+      expect(ruleCount).toBe(1);
     });
   });
 
