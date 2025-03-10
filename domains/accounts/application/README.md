@@ -1,6 +1,6 @@
 # Accounts Domain
 
-This represents the serverless migration of the original Accounts microservice. The domain is implemented using AWS CDK following Domain-Driven Design (DDD) principles and event-driven architecture.
+This stack represents the serverless migration of the original Accounts microservice. The domain is implemented using AWS CDK following the Architecture as Code (AaC) paradigm and event-driven architecture.
 
 ## Core Functions
 
@@ -13,37 +13,10 @@ The domain provides the following features:
 ## Event Communication
 
 The domain consumes the following events:
-- `TransactionCompleted`: Updates sender and receiver balances after money transfer
-- `LoanGranted`: Updates account balance after loan approval
+- `TransactionCompleted`: Updates sender and receiver balances after money transferl
 
-Events are processed by a dedicated Lambda function that handles balance updates atomically.
-
-## Technical Implementation
-
-### Infrastructure (AWS Services)
+## Infrastructure 
 - Lambda functions for serverless compute
 - DocumentDB for account storage
-- EventBridge for event communication
+- Amazon EventBridge for event communication
 - API Gateway for REST endpoints
-
-### Dependencies
-- Requires access to DocumentDB cluster
-- Requires shared EventBridge event bus
-- Requires VPC configuration for database access
-
-### Database Schema
-The domain manages account records in DocumentDB with the following key fields:
-- Account number
-- Account type
-- Name
-- Email ID
-- Balance
-- Currency
-- Address
-- Government ID details
-- Creation timestamp
-
-### Configuration
-Required environment variables:
-- `DB_URL`: DocumentDB connection string
-- `EVENT_BUS_NAME`: Name of the shared event bus
