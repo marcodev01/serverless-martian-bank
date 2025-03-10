@@ -15,7 +15,8 @@ The architecture is composed of the following stack types:
    - This stack provides the base infrastructure required by all other stacks.
 
 2. **DocumentDB Stack**:
-   - Implements a stateful database (MongoDB) to store data for all domains. (used for showcase only since and cannot be applied actaually be applied with cdk since a paid production plan would be needed)
+   - Implements a stateful database (MongoDB) to store data for all domains.
+     Note: This stack is for demonstration purposes only, as MongoDB setup by CDK would require a paid plan.
 
 3. **Auth Stack**
    - Provides authentication and authorization mechanisms for the application using AWS Cognito.
