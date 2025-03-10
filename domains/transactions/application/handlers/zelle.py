@@ -32,13 +32,13 @@ def handler(event, context):
         
         # Determine sender and receiver accounts using the e-mail
         sender_account = collection_accounts.find_one(
-            {"email": request_data["sender_email"]}
+            {"email_id": request_data["sender_email"]}
         )
         if not sender_account:
             return error_response("Sender Account Not Found", 404)
         
         receiver_account = collection_accounts.find_one(
-            {"email": request_data["receiver_email"]}
+            {"email_id": request_data["receiver_email"]}
         )
         if not receiver_account:
             return error_response("Receiver Account Not Found", 404)

@@ -35,15 +35,15 @@ class LoanUser(HttpUser):
             # Create a new account
             self.client.post(
                 f"{account_host}/create",
-                data=self.user_data,
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                json=self.user_data,
+                headers={"Content-Type": "application/json"},
             )
 
             # Get all accounts
             response = self.client.post(
                 f"{account_host}/allaccounts",
-                data={"email_id": self.user_data["email_id"]},
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                json={"email_id": self.user_data["email_id"]},
+                headers={"Content-Type": "application/json"},
             )
             self.account_number = response.json()["response"][0]["account_number"]
 
@@ -59,15 +59,15 @@ class LoanUser(HttpUser):
                 ["Base Camp", "Rover", "Potato Farming", "Ice Home", "Rocker"]
             )
             self.client.post(
-                "/",
-                data=self.user_data,
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                "/process",
+                json=self.user_data,
+                headers={"Content-Type": "application/json"},
             )
 
         @task(2)
         def history(self):
             self.client.post(
                 "/history",
-                data={"email": self.user_data["email_id"]},
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                json={"email": self.user_data["email_id"]},
+                headers={"Content-Type": "application/json"},
             )

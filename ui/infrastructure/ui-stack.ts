@@ -63,3 +63,5 @@ export class UiStack extends cdk.Stack {
     });
   }
 }
+
+// TODO automatic vite build

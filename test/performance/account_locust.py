@@ -40,22 +40,22 @@ class AccountUser(HttpUser):
                 self.user_data["account_type"] = selected_type
                 self.client.post(
                     "/create",
-                    data=self.user_data,
-                    headers={"Content-Type": "application/x-www-form-urlencoded"},
+                    json=self.user_data,
+                    headers={"Content-Type": "application/json"},
                 )
         
         @task(3)
         def get_all_accounts(self):
             self.client.post(
                 "/allaccounts",
-                data={"email_id": self.user_data["email_id"]},
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                json={"email_id": self.user_data["email_id"]},
+                headers={"Content-Type": "application/json"},
             )
         
         @task(2)
         def get_particular_account(self):
             self.client.get(
                 "/detail",
-                data={"email": self.user_data["email_id"]},
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                json={"email": self.user_data["email_id"]},
+                headers={"Content-Type": "application/json"},
             )

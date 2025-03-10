@@ -3,6 +3,7 @@ import random
 from faker import Faker
 import os
 from dotenv import load_dotenv 
+import logging
 
 load_dotenv()
 
@@ -34,8 +35,8 @@ class TransactionUser(HttpUser):
             }
             self.client.post(
                 f"{accounts_host}/create",
-                data=self.first_user,
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                json=self.first_user,
+                headers={"Content-Type": "application/json"},
             )
 
             # Create another fake account
@@ -44,15 +45,15 @@ class TransactionUser(HttpUser):
             )
             self.client.post(
                 f"{accounts_host}/create",
-                data=self.first_user,
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                json=self.first_user,
+                headers={"Content-Type": "application/json"},
             )
 
             # Get all accounts
             response = self.client.post(
                 f"{accounts_host}/allaccounts",
-                data={"email_id": self.first_user["email_id"]},
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                json={"email_id": self.first_user["email_id"]},
+                headers={"Content-Type": "application/json"},
             )
             self.account_numbers = [
                 account["account_number"] for account in response.json()["response"]
@@ -72,40 +73,40 @@ class TransactionUser(HttpUser):
             }
             self.client.post(
                 f"{accounts_host}/create",
-                data=self.second_user,
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                json=self.second_user,
+                headers={"Content-Type": "application/json"},
             )
 
         @task(1)
         def internal_transfer(self):
             self.client.post(
-                f"/",
-                data={
+                f"/transfer",
+                json={
                     "sender_account_number": self.account_numbers[0],
                     "receiver_account_number": self.account_numbers[1],
                     "amount": fake.random_int(min=1, max=3),
                     "reason": "Internal Transfer",
                 },
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                headers={"Content-Type": "application/json"},
             )
 
         @task(1)
         def external_transfer(self):
             self.client.post(
-                f"/zelle/",
-                data={
+                f"/zelle",
+                json={
                     "sender_email": self.first_user["email_id"],
                     "receiver_email": self.second_user["email_id"],
                     "amount": fake.random_int(min=1, max=3),
                     "reason": "External Transfer",
                 },
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                headers={"Content-Type": "application/json"},
             )
 
         @task(3)
         def transaction_history(self):
             self.client.post(
                 f"/history",
-                data={"account_number": self.account_numbers[0]},
-                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                json={"account_number": self.account_numbers[0]},
+                headers={"Content-Type": "application/json"},
             )
